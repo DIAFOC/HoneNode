@@ -26,7 +26,7 @@ the project (§3.4), so it is visible in the layout:
 The app writes *desired state* to the SQLite registry; the broker reconciles:
 render the unit atomically → validate → `daemon-reload` → start/stop.
 
-Licence: **GPL-3.0-or-later**.  See `../LICENSING.md`.
+Licence: **GPL-3.0-or-later**.  See `../LICENSE`.
 
 ## What is implemented
 

@@ -11,6 +11,11 @@
 # Fedora glibc binary can require a newer loader than Rocky provides.
 set -euo pipefail
 
+# build.sh is invoked both from a Rocky container job and from a non-Rocky
+# host that boots Rocky through Podman. Read the real OS identity instead of
+# relying on an exported ID (shells do not export /etc/os-release fields).
+. /etc/os-release
+
 cd "$(dirname "$0")/../../.."
 REPO=$(pwd)
 # The smoke defaults to /workspace; in a GitHub container job the checkout is

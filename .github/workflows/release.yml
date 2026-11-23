@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Fedora-tagged bundle
         run: |
-          dnf -y install cargo rust gcc make
+          dnf -y install cargo rust gcc make python3
           bash packaging/os/fedora/build.sh --skip-tests
       - uses: actions/upload-artifact@v4
         with:
@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Rocky-tagged bundle
         run: |
-          dnf -y install gcc make
+          dnf -y install gcc make python3
           bash packaging/os/rocky/build.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -78,7 +78,7 @@ jobs:
       VERSION: ${{ needs.version.outputs.value }}
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v6
         with:
           context: backend
@@ -100,7 +100,7 @@ jobs:
     needs: [version, fedora-bundle, rocky-bundle, app-image]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true

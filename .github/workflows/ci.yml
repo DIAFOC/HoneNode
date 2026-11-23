@@ -73,12 +73,23 @@ jobs:
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Cargo Audit
-        uses: rustsec/audit-check@v2.0.0
+      - uses: actions/setup-python@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: backend
+          python-version: '3.13'
+
+      # Ignored advisories:
+      # - RUSTSEC-2026-0459: sqlx 0.8 pins libsqlite3-sys 0.30; the fix needs
+      #   Rust 1.94, which the Rocky 10 bundle toolchain does not provide.
+      # - RUSTSEC-2023-0071: rsa is reachable only through sqlx-mysql, an
+      #   optional dependency that this workspace does not compile.
+      - name: Cargo Audit
+        run: |
+          curl -sSfL "https://github.com/rustsec/rustsec/releases/download/cargo-audit/v0.23.0/cargo-audit-x86_64-unknown-linux-gnu-v0.23.0.tgz" \
+            | tar -xz -C /tmp
+          /tmp/cargo-audit-x86_64-unknown-linux-gnu-v0.23.0/cargo-audit audit \
+            --file backend/Cargo.lock \
+            --ignore RUSTSEC-2026-0459 \
+            --ignore RUSTSEC-2023-0071
 
       - name: Cargo Deny
         if: always()
@@ -108,14 +119,14 @@ jobs:
             .
       - name: Upload Semgrep SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
           category: semgrep
 
       - name: Trivy filesystem scan
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -128,28 +139,49 @@ jobs:
           skip-files: 'backend/crates/honenode/src/tests.rs,backend/crates/honenode/src/observation_tests.rs,backend/crates/honenode/src/portal_service_tests.rs,backend/crates/honenode/src/provisioning_tests.rs,backend/crates/honenode/tests/*,packaging/tests/*,backend/crates/honenode/SIGNUP_BILLING.md,security/HoneNode_Threat_Model_STRIDE.json'
       - name: Upload Trivy SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
 
-      - name: Gitleaks
+      # Betterleaks is the maintained successor to Gitleaks by the same
+      # authors (MIT, no license key). The SARIF report keeps results in the
+      # Security tab; the scan itself fails the job on any finding.
+      - name: Betterleaks secrets scan
         if: always()
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        run: |
+          curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/betterleaks_1.10.1_linux_x64.tar.gz" \
+            -o /tmp/betterleaks.tar.gz
+          curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/checksums.txt" \
+            -o /tmp/betterleaks-checksums.txt
+          (cd /tmp && grep " betterleaks_1.10.1_linux_x64.tar.gz$" betterleaks-checksums.txt | sha256sum -c -)
+          tar -xzf /tmp/betterleaks.tar.gz -C /tmp
+          /tmp/betterleaks git . \
+            --config .betterleaks.toml \
+            --report-format sarif \
+            --report-path betterleaks.sarif \
+            --no-banner \
+            --redact \
+            --exit-code 1
+      - name: Upload Betterleaks SARIF
+        if: always() && hashFiles('betterleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: betterleaks.sarif
+          category: betterleaks
 
       - name: OSV-Scanner
         if: always()
         continue-on-error: true
         run: |
-          curl -sSfL "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" -o /usr/local/bin/osv-scanner
-          chmod +x /usr/local/bin/osv-scanner
-          osv-scanner --lockfile=backend/Cargo.lock --format sarif --output osv-scanner.sarif || true
+          curl -sSfL "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" \
+            -o /tmp/osv-scanner
+          chmod +x /tmp/osv-scanner
+          /tmp/osv-scanner scan source --lockfile backend/Cargo.lock \
+            --format sarif --output-file osv-scanner.sarif || true
       - name: Upload OSV-Scanner SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('osv-scanner.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: osv-scanner.sarif
           category: osv-scanner
@@ -162,7 +194,7 @@ jobs:
           find packaging -name '*.sh' -print0 | xargs -0 -r shellcheck -x -S error
       - name: Hadolint
         if: always()
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: backend/Containerfile
           failure-threshold: error
@@ -175,14 +207,14 @@ jobs:
 
       - name: Dependency review
         if: always() && github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
 
   dast:
     name: ZAP baseline DAST
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build app image
         uses: docker/build-push-action@v6
         with:
@@ -192,6 +224,23 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Trivy image scan
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: honenode-app:ci
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Upload Trivy image SARIF
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
       - name: Start app
         run: |
           docker run -d --name honenode-app \
@@ -277,17 +326,35 @@ jobs:
           name: lynis-report
           path: /tmp/lynis.log
 
+  rocky-build:
+    name: Rocky 10 native build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: quay.io/rockylinux/rockylinux:10
+      options: --user root
+    env:
+      HONENODE_REPO: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with Rocky's toolchain
+        run: bash packaging/rocky/smoke.sh --build-only
+
+  # The full smoke needs systemd as PID 1 and a privileged rootless-Podman
+  # nest. Booting Rocky through Podman on the runner VM is what works; running
+  # Podman inside a Rocky job container does not (exit 125). Kept advisory
+  # because GitHub's nested namespaces are the flaky part, not the product.
   smoke-rocky:
-    name: Rocky 10 full smoke (advisory on GitHub)
+    name: Rocky 10 full smoke (advisory)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     continue-on-error: true
-    container:
-      image: quay.io/rockylinux/rockylinux:10
-      options: --privileged --cgroupns=host
     steps:
       - uses: actions/checkout@v4
       - name: Install Podman
-        run: dnf -y install podman passt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman passt uidmap fuse-overlayfs slirp4netns
+          podman --version
       - name: Run Rocky smoke
         run: bash packaging/rocky/run_smoke_podman.sh

@@ -18,9 +18,9 @@ RUN apk add --no-cache build-base sqlite-dev
 WORKDIR /src
 COPY . .
 
-# TODO(ci): switch to `--locked` once Cargo.lock is committed and the pipeline
-# gates on it (§9: reproducible builds).
-RUN cargo build --release -p honenode
+# Cargo.lock is committed; --locked keeps the image reproducible and matches
+# the CI gate.
+RUN cargo build --release -p honenode --locked
 
 # -----------------------------------------------------------------------------
 

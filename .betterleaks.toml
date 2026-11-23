@@ -13,3 +13,16 @@ paths = [
   '''backend/crates/honenode/SIGNUP_BILLING\.md''',
   '''security/HoneNode_Threat_Model_STRIDE\.json''',
 ]
+
+# Test modules in the broker crate use these obvious placeholders as fixture
+# passwords. Match the line, not the whole file, so a real secret in the same
+# source file is still reported.
+[[allowlists]]
+description = "Fake credentials used by broker unit tests"
+regexTarget = "line"
+regexes = [
+  '''correct horse battery''',
+  '''unique-secret-value''',
+  '''supersecretvalue''',
+  '''secret-wire-value''',
+]
