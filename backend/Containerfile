@@ -1,0 +1,42 @@
+# =============================================================================
+# HoneNode — the management plane image (§4.2: one image, one process).
+#
+# Multi-stage: the Rust toolchain never reaches the runtime layer, and the
+# runtime layer is distroless — no shell, no package manager, nothing to pivot
+# through.  The app has no host authority by construction (§3.4).
+#
+# Build (rootless, as the platform account — see deploy/06-app-build.sh):
+#     podman build -t localhost/honenode-app:dev -f backend/Containerfile backend/
+# =============================================================================
+
+FROM docker.io/library/rust:1-alpine AS build
+
+# build-base supplies musl-dev, gcc and make; sqlx's bundled SQLite is
+# compiled here too, so a C toolchain and the SQLite headers are required.
+RUN apk add --no-cache build-base sqlite-dev
+
+WORKDIR /src
+COPY . .
+
+# TODO(ci): switch to `--locked` once Cargo.lock is committed and the pipeline
+# gates on it (§9: reproducible builds).
+RUN cargo build --release -p honenode
+
+# -----------------------------------------------------------------------------
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=build /src/target/release/honenode /usr/local/bin/honenode
+COPY --from=build /src/static /app/static
+
+WORKDIR /app
+ENV HONE_STATIC_DIR=/app/static
+
+# uid 65532 ("nonroot").  The Quadlet unit maps it onto the platform account
+# with `UserNS=keep-id:uid=65532,gid=65532`, so the registry volume it owns is
+# writable without the container ever running as root.
+USER nonroot:nonroot
+
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/honenode"]

@@ -1,0 +1,30 @@
+# Rust build cache
+target/
+**/target/
+backend/.build-tools/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Lab state and generated credentials
+.native-state*/
+.native-state-firstrun/
+bootstrap.env
+bootstrap-credentials.txt
+*.db
+*.db-wal
+*.db-shm
+*.env
+
+# Generated bundles and images
+packaging/os/dist/
+packaging/release/*.tar.gz
+*.tar
+*.tar.gz
+*.oci.tar
+
+# Logs and local artifacts
+*.log
+packaging/.local-run/
+.DS_Store

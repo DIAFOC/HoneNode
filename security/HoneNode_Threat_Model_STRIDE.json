@@ -1,0 +1,2381 @@
+{
+  "version": "2.0.0",
+  "release_version": "0.8.8",
+  "released_at": "2026-11-23",
+  "summary": {
+    "title": "HoneNode — STRIDE threat model (AgileCTI)",
+    "owner": "AgileCTI",
+    "description": "Threat model developed by AgileCTI (fictitious CTI provider). Subject of test: HoneNode, developed by SharpNode SP. Methodology: STRIDE, OWASP Threat Dragon. Scope: the HoneNode management plane (app + honed broker), the tenant isolation model, the edge/WAF chain and the four demo services (static blog, shop database, media vault, git forge).",
+    "id": 0
+  },
+  "detail": {
+    "contributors": [
+      {
+        "name": "AgileCTI"
+      }
+    ],
+    "diagrams": [
+      {
+        "name": "",
+        "title": "HoneNode — platform overview (STRIDE)",
+        "description": "Trust boundaries and STRIDE threats for the HoneNode management plane and tenant isolation model.",
+        "diagramType": "STRIDE",
+        "thumbnail": "./public/content/images/thumbnail.stride.jpg",
+        "version": "2.0.0",
+        "id": 0,
+        "cells": [
+          {
+            "id": "b87313b4-ce44-52a2-aceb-4a8d22f23dbd",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 300,
+              "y": 10
+            },
+            "size": {
+              "width": 280,
+              "height": 270
+            },
+            "attrs": {
+              "label": {
+                "text": "TB1 Internet ↔ Edge (public 80/443)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB1 Internet ↔ Edge (public 80/443)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "7d78186f-16fa-5949-bde2-f746a7ad98be",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 600,
+              "y": 60
+            },
+            "size": {
+              "width": 260,
+              "height": 180
+            },
+            "attrs": {
+              "label": {
+                "text": "TB2 Panel plane (edge → app)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB2 Panel plane (edge → app)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "6d2d8549-f906-5384-8d66-07896ae4c2ec",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 600,
+              "y": 270
+            },
+            "size": {
+              "width": 260,
+              "height": 170
+            },
+            "attrs": {
+              "label": {
+                "text": "TB3 Broker authority (app → honed)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB3 Broker authority (app → honed)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "ab337cd9-e2cc-5205-b55b-ec6f4bda01dd",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 880,
+              "y": 340
+            },
+            "size": {
+              "width": 500,
+              "height": 180
+            },
+            "attrs": {
+              "label": {
+                "text": "TB4 Tenant isolation (UID + netns)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB4 Tenant isolation (UID + netns)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "d3904990-3460-5fe6-a0aa-9afd2bba715c",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 20,
+              "y": 340
+            },
+            "size": {
+              "width": 250,
+              "height": 150
+            },
+            "attrs": {
+              "label": {
+                "text": "TB5 Operator access (loopback / SSH tunnel)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB5 Operator access (loopback / SSH tunnel)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "d2e6b9a3-6ad2-5df5-a926-f9aa62aec2f8",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 600,
+              "y": 520
+            },
+            "size": {
+              "width": 780,
+              "height": 160
+            },
+            "attrs": {
+              "label": {
+                "text": "TB6 Security stack (external planes)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB6 Security stack (external planes)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "11758eb8-b05d-5b53-8111-39fd6f6b3171",
+            "shape": "actor",
+            "position": {
+              "x": 40,
+              "y": 40
+            },
+            "size": {
+              "width": 120,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Internet user"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Actor",
+              "name": "Internet user",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "58c752d4-8928-529f-b141-56d42aa82e0d",
+                  "threatId": "58c752d4-8928-529f-b141-56d42aa82e0d",
+                  "number": 1,
+                  "title": "Anonymous internet traffic reaches tenant sites",
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "Any internet client can reach tenant vhosts through the edge; the edge must not confuse tenants.",
+                  "mitigation": "Caddy routes by validated hostname; the app validates tenant/service/hostname ownership before rendering a vhost.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "providesAuthentication": false
+            }
+          },
+          {
+            "id": "d8bc0dda-6bdf-55b1-9044-065a1465dec9",
+            "shape": "actor",
+            "position": {
+              "x": 40,
+              "y": 200
+            },
+            "size": {
+              "width": 130,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Tenant (browser)"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Actor",
+              "name": "Tenant (browser)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "6516d168-f69c-585c-b2c3-cc21a395f2f8",
+                  "threatId": "6516d168-f69c-585c-b2c3-cc21a395f2f8",
+                  "number": 2,
+                  "title": "Credential stuffing against the shared login panel",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Spoofing",
+                  "description": "Tenants and the operator share one login panel; account numbers are bearer identifiers.",
+                  "mitigation": "12-digit Luhn account numbers, argon2id, per-account and global rate limits, fail2ban, KDF cost for unknown accounts.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "providesAuthentication": false
+            }
+          },
+          {
+            "id": "8d6aac1f-9b3a-5934-9780-ec038290f603",
+            "shape": "actor",
+            "position": {
+              "x": 40,
+              "y": 380
+            },
+            "size": {
+              "width": 150,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Operator (browser)"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Actor",
+              "name": "Operator (browser)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "53e50dc5-030e-5be8-8bcb-f0a3de807cec",
+                  "threatId": "53e50dc5-030e-5be8-8bcb-f0a3de807cec",
+                  "number": 3,
+                  "title": "Operator dashboard exposed to the internet",
+                  "status": "Mitigated",
+                  "severity": "Critical",
+                  "type": "Elevation of privilege",
+                  "description": "The operator console grants tenant, plan and quota administration.",
+                  "mitigation": "Loopback-only listener, SSH tunnel, documented exposure model; never an unprotected public listener.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "providesAuthentication": false
+            }
+          },
+          {
+            "id": "32c24a9f-4d9b-5ab9-b9c6-5bbb9f5ca723",
+            "shape": "process",
+            "position": {
+              "x": 330,
+              "y": 40
+            },
+            "size": {
+              "width": 130,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Caddy edge"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Caddy edge",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "c6dba2bb-420a-528c-b016-9c0db9d567db",
+                  "threatId": "c6dba2bb-420a-528c-b016-9c0db9d567db",
+                  "number": 4,
+                  "title": "Tenant hostname takeover or vhost misrouting",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "A tenant could claim another tenant's hostname or receive traffic for a vhost it does not own.",
+                  "mitigation": "Validate tenant/service/hostname ownership in the app before rendering vhosts; per-host TLS; no wildcard sharing.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "4865a3ab-aa6b-5d5f-bcc9-8c4264a8f9a4",
+                  "threatId": "4865a3ab-aa6b-5d5f-bcc9-8c4264a8f9a4",
+                  "number": 5,
+                  "title": "Edge connection flood",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Denial of service",
+                  "description": "Public 80/443 is the only public HTTP surface and can be saturated.",
+                  "mitigation": "WAF rate limiting, fail2ban, connection limits; edge logs feed per-vhost bandwidth accounting.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "rootless, binds 80/443"
+            }
+          },
+          {
+            "id": "a2dca4be-0d1a-5543-95e4-507c6b01b6a8",
+            "shape": "process",
+            "position": {
+              "x": 330,
+              "y": 160
+            },
+            "size": {
+              "width": 150,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "ModSecurity WAF (CRS)"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "ModSecurity WAF (CRS)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "6b44b7f1-7c8c-5a8a-8e68-22b0fbef1433",
+                  "threatId": "6b44b7f1-7c8c-5a8a-8e68-22b0fbef1433",
+                  "number": 6,
+                  "title": "CRS bypass via encoding or parser mismatch",
+                  "status": "Open",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "A crafted request may evade ModSecurity rules while the upstream app still parses it.",
+                  "mitigation": "Pinned image, DetectionOnly → tune → On rollout, ZAP regression, rule updates.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "6aeebf77-74e9-5ac9-9e5b-b4f594bc92bb",
+                  "threatId": "6aeebf77-74e9-5ac9-9e5b-b4f594bc92bb",
+                  "number": 7,
+                  "title": "Request bodies or tokens captured in audit logs",
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "description": "ModSecurity audit logs can contain credentials if bodies are logged.",
+                  "mitigation": "Audit parts exclude request bodies on auth paths; redaction before shipping.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "inline reverse proxy"
+            }
+          },
+          {
+            "id": "38a29c07-67df-58f7-a27c-087d5c742309",
+            "shape": "process",
+            "position": {
+              "x": 630,
+              "y": 90
+            },
+            "size": {
+              "width": 160,
+              "height": 70
+            },
+            "attrs": {
+              "text": {
+                "text": "HoneNode app"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "HoneNode app",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "b21a8415-9e0b-5af1-a556-087854445bb9",
+                  "threatId": "b21a8415-9e0b-5af1-a556-087854445bb9",
+                  "number": 8,
+                  "title": "Session cookie theft via XSS",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Spoofing",
+                  "description": "A stolen session cookie impersonates the tenant or operator.",
+                  "mitigation": "HttpOnly, SameSite, Secure cookies; strict CSP without inline; no third-party origins.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "b9d3d9c2-704e-5257-b840-91c9fbbe2976",
+                  "threatId": "b9d3d9c2-704e-5257-b840-91c9fbbe2976",
+                  "number": 9,
+                  "title": "CSRF on state-changing routes",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "A cross-site form could provision, delete or redeem on behalf of a logged-in user.",
+                  "mitigation": "Per-session CSRF token on every state-changing form; SameSite cookies.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "9a887681-affe-5512-a444-4bb4496ee12b",
+                  "threatId": "9a887681-affe-5512-a444-4bb4496ee12b",
+                  "number": 10,
+                  "title": "App compromise escalates to host authority",
+                  "status": "Mitigated",
+                  "severity": "Critical",
+                  "type": "Elevation of privilege",
+                  "description": "The app renders tenant input and runs next to the host agent.",
+                  "mitigation": "Unprivileged app, no Podman socket, no shell, no tenant sockets; only typed broker calls over a Unix socket.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "4261783d-9502-598b-9a3c-3716a5516a96",
+                  "threatId": "4261783d-9502-598b-9a3c-3716a5516a96",
+                  "number": 11,
+                  "title": "Secrets rendered by inspection or console views",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Information disclosure",
+                  "description": "Inspection endpoints could return environment values or password hashes.",
+                  "mitigation": "Keys-only projections, hostile-answer validation, no DB console; secret values never stored in app SQL.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "8b5251b1-dbdc-5cbd-8d48-76a424a0f3ec",
+                  "threatId": "8b5251b1-dbdc-5cbd-8d48-76a424a0f3ec",
+                  "number": 12,
+                  "title": "First-run operator credentials exposed in logs",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "Generated operator credentials are printed once to the journal and written to a bootstrap file.",
+                  "mitigation": "Mode-0600 bootstrap file, single WARN line, save-and-delete instruction, restricted journal access.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "a150b748-d2cb-549d-8441-60fbe13c607e",
+                  "threatId": "a150b748-d2cb-549d-8441-60fbe13c607e",
+                  "number": 13,
+                  "title": "Missing audit for denied actions",
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Repudiation",
+                  "description": "A denied login, key redemption or provisioning attempt could leave no trace.",
+                  "mitigation": "Audit events for login, signup, keys, provisioning and lifecycle, including denials.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "unprivileged container"
+            }
+          },
+          {
+            "id": "11286275-0d44-5fac-a7d4-a0d80868e255",
+            "shape": "process",
+            "position": {
+              "x": 630,
+              "y": 300
+            },
+            "size": {
+              "width": 160,
+              "height": 70
+            },
+            "attrs": {
+              "text": {
+                "text": "honed broker"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "honed broker",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "5b83d28b-4307-59a7-8067-e536d286ef0d",
+                  "threatId": "5b83d28b-4307-59a7-8067-e536d286ef0d",
+                  "number": 14,
+                  "title": "Rogue local process connects to the broker socket",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Spoofing",
+                  "description": "Any local process that can open the socket could request host actions.",
+                  "mitigation": "Socket 0660 root:platform group, peer-UID audit, typed operations, root-owned policy.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "f4cac4c3-2c20-57fa-9218-a3646d50d821",
+                  "threatId": "f4cac4c3-2c20-57fa-9218-a3646d50d821",
+                  "number": 15,
+                  "title": "Command or unit injection through free-form arguments",
+                  "status": "Mitigated",
+                  "severity": "Critical",
+                  "type": "Elevation of privilege",
+                  "description": "The broker writes Quadlet units and runs systemctl as root.",
+                  "mitigation": "Typed arguments only, names derived from tenant IDs, allowlist regexes, no interpolation into Exec=/Volume=/Environment=.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "d4622eda-06b5-5555-9c0c-f6a1c87a2b29",
+                  "threatId": "d4622eda-06b5-5555-9c0c-f6a1c87a2b29",
+                  "number": 16,
+                  "title": "Operator policy swapped by a non-root process",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "The policy is the authorization source for plans and limits.",
+                  "mitigation": "Root-owned policy, O_NOFOLLOW, per-call load and validation, 64 KiB cap.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "999dcd39-a53c-5fa3-b21b-010306688f11",
+                  "threatId": "999dcd39-a53c-5fa3-b21b-010306688f11",
+                  "number": 17,
+                  "title": "Reservation exhaustion via repeated provisioning",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Denial of service",
+                  "description": "A tenant could consume host CPU/memory reservations with repeated requests.",
+                  "mitigation": "Reservations and tombstones, host CPU budget, per-tenant caps, jobs and audit trail.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "root (systemd service)"
+            }
+          },
+          {
+            "id": "29ee97b4-4365-5cbf-aa6a-5cca31ea18c8",
+            "shape": "store",
+            "position": {
+              "x": 900,
+              "y": 40
+            },
+            "size": {
+              "width": 150,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "SQLite registry"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Store",
+              "name": "SQLite registry",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "4f123c62-b3db-56e6-abc8-92927f568c36",
+                  "threatId": "4f123c62-b3db-56e6-abc8-92927f568c36",
+                  "number": 18,
+                  "title": "Registry file modified by a tenant",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "The registry holds accounts, sessions, plans and audit.",
+                  "mitigation": "0600 app-user-owned file, no network surface, parameterized SQL, WAL single-writer.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "80c89e13-eb3e-54a9-8634-a7fff2b5cc43",
+                  "threatId": "80c89e13-eb3e-54a9-8634-a7fff2b5cc43",
+                  "number": 19,
+                  "title": "Backups contain password hashes and audit PII",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "description": "Offline backups replicate credentials and personal data.",
+                  "mitigation": "VACUUM INTO plus encrypted off-host storage when configured; retention policy.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "storesCredentials": true
+            }
+          },
+          {
+            "id": "d532cd7a-1675-5e85-805f-9ef1112451b2",
+            "shape": "store",
+            "position": {
+              "x": 900,
+              "y": 200
+            },
+            "size": {
+              "width": 170,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Quadlet units + secrets"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Store",
+              "name": "Quadlet units + secrets",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "c078707b-0878-52d1-91d0-ec4330e68abe",
+                  "threatId": "c078707b-0878-52d1-91d0-ec4330e68abe",
+                  "number": 20,
+                  "title": "Secret environment files readable by the tenant",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Information disclosure",
+                  "description": "Database and Forgejo secrets live in root-owned env files.",
+                  "mitigation": "Root-owned 0600 files, broker-only writes, keys-only inspection in the panel.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "storesCredentials": true
+            }
+          },
+          {
+            "id": "32b220ef-d786-50d6-b01f-28839881b6ff",
+            "shape": "process",
+            "position": {
+              "x": 900,
+              "y": 380
+            },
+            "size": {
+              "width": 200,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Rootless Podman tenant planes"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Rootless Podman tenant planes",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "056b353d-f747-5e30-8481-6939c3112613",
+                  "threatId": "056b353d-f747-5e30-8481-6939c3112613",
+                  "number": 21,
+                  "title": "Container escape to the host",
+                  "status": "Open",
+                  "severity": "Critical",
+                  "type": "Elevation of privilege",
+                  "description": "A kernel or runtime escape would break the per-tenant UID boundary.",
+                  "mitigation": "Rootless Podman, no privileges, no host mounts, SELinux on the target, seccomp defaults, patched kernel.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "622c53a3-5a0c-5503-b579-691c7b166420",
+                  "threatId": "622c53a3-5a0c-5503-b579-691c7b166420",
+                  "number": 22,
+                  "title": "Cross-tenant data or network access",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Information disclosure",
+                  "description": "Tenants share one host and one loopback.",
+                  "mitigation": "One UID and netns per tenant, internal networks, no loopback mapping, no shared volumes.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "509292d0-5fa7-50f7-9e02-fa8790b6c20d",
+                  "threatId": "509292d0-5fa7-50f7-9e02-fa8790b6c20d",
+                  "number": 23,
+                  "title": "Noisy neighbour saturates the host",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Denial of service",
+                  "description": "One tenant workload could starve the others.",
+                  "mitigation": "cgroup v2 MemoryHigh/Max, CPUWeight/Quota, TasksMax, PidsLimit; PSI telemetry phase 2.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "0e6ee1af-f1e4-59f9-ad9a-a90dc4d97f4c",
+                  "threatId": "0e6ee1af-f1e4-59f9-ad9a-a90dc4d97f4c",
+                  "number": 24,
+                  "title": "Tenant workload reaches host loopback, registry or WAF",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Information disclosure",
+                  "description": "Loopback-published services and the broker socket must stay unreachable from containers.",
+                  "mitigation": "pasta --no-map-gw, internal network without default route, host firewall.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "per-tenant rootless"
+            }
+          },
+          {
+            "id": "6aba310d-29d9-5b51-9416-6ea067571c9a",
+            "shape": "store",
+            "position": {
+              "x": 1160,
+              "y": 380
+            },
+            "size": {
+              "width": 160,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Tenant data volumes"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Store",
+              "name": "Tenant data volumes",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "0971b6f5-bf2a-5256-bd91-3826111dde63",
+                  "threatId": "0971b6f5-bf2a-5256-bd91-3826111dde63",
+                  "number": 25,
+                  "title": "Volume data survives deletion longer than policy",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "description": "Deleting a service does not erase its volume data.",
+                  "mitigation": "Documented retention and purge procedure; operator-mediated erasure.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ]
+            }
+          },
+          {
+            "id": "4324879f-c09c-5eba-b4bc-9d7ec6f1322b",
+            "shape": "process",
+            "position": {
+              "x": 1160,
+              "y": 120
+            },
+            "size": {
+              "width": 170,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Image registries"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Image registries",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "393ca4cd-2ea8-5b33-b74d-2685b653c1c6",
+                  "threatId": "393ca4cd-2ea8-5b33-b74d-2685b653c1c6",
+                  "number": 26,
+                  "title": "Unsigned or unpinned images pulled at start",
+                  "status": "Open",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "Tenant workloads pull images at activation time.",
+                  "mitigation": "Registry allowlist, pinned digests, Trivy/SBOM, signed registry (proposed).",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "9a18c411-a62b-5cc2-80e3-c1f4002bba46",
+                  "threatId": "9a18c411-a62b-5cc2-80e3-c1f4002bba46",
+                  "number": 27,
+                  "title": "Image name confusion or typosquatting",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "A lookalike image could be approved by mistake.",
+                  "mitigation": "Fully qualified references validated against the root catalog; allowed registries only.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "host egress at pull time"
+            }
+          },
+          {
+            "id": "c42077ff-88be-550b-bdb3-e7de774942b2",
+            "shape": "process",
+            "position": {
+              "x": 1160,
+              "y": 540
+            },
+            "size": {
+              "width": 150,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Splunk SIEM"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Splunk SIEM",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "c3dd1827-9f8e-57b7-878c-8ffa12b1abad",
+                  "threatId": "c3dd1827-9f8e-57b7-878c-8ffa12b1abad",
+                  "number": 28,
+                  "title": "SIEM credentials or logs leak to tenants",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Information disclosure",
+                  "description": "Approved logs include account identifiers and source IPs.",
+                  "mitigation": "Read-only role, root-only HEC token, no browser access, TLS, retention configured.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "external"
+            }
+          },
+          {
+            "id": "65544ad1-8d30-5e54-a368-8aa135dbdf27",
+            "shape": "process",
+            "position": {
+              "x": 630,
+              "y": 540
+            },
+            "size": {
+              "width": 150,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "MISP CTI plane"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "MISP CTI plane",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "2b504eca-4655-529c-8eb7-b25a8a2f420e",
+                  "threatId": "2b504eca-4655-529c-8eb7-b25a8a2f420e",
+                  "number": 29,
+                  "title": "Untrusted CTI data reaches the hosting plane",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "MISP ingests untrusted third-party data.",
+                  "mitigation": "Isolated network, gated activation, loopback UI, no shared network with panel, registry or tenants.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "external, isolated"
+            }
+          },
+          {
+            "id": "257f494f-f1bc-5a3a-b263-84ffd7b62766",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "HTTPS",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS",
+              "isEncrypted": true,
+              "isPublicNetwork": true,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "11758eb8-b05d-5b53-8111-39fd6f6b3171"
+            },
+            "target": {
+              "cell": "32c24a9f-4d9b-5ab9-b9c6-5bbb9f5ca723"
+            }
+          },
+          {
+            "id": "235d52cf-20f8-55fa-8193-48f7832371d2",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Panel/portal HTTPS",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS",
+              "isEncrypted": true,
+              "isPublicNetwork": true,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "d8bc0dda-6bdf-55b1-9044-065a1465dec9"
+            },
+            "target": {
+              "cell": "32c24a9f-4d9b-5ab9-b9c6-5bbb9f5ca723"
+            }
+          },
+          {
+            "id": "bbc79bd8-e773-547d-bec6-df8ba970fc87",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Edge upstream",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP (loopback)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "32c24a9f-4d9b-5ab9-b9c6-5bbb9f5ca723"
+            },
+            "target": {
+              "cell": "a2dca4be-0d1a-5543-95e4-507c6b01b6a8"
+            }
+          },
+          {
+            "id": "486c0bb0-1ebb-5727-963e-b635e41fc590",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Filtered HTTP",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP (loopback)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "a2dca4be-0d1a-5543-95e4-507c6b01b6a8"
+            },
+            "target": {
+              "cell": "38a29c07-67df-58f7-a27c-087d5c742309"
+            }
+          },
+          {
+            "id": "905a8ce6-9847-55bc-afc4-13f9f977c5e5",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Loopback / SSH tunnel",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP (loopback)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "8d6aac1f-9b3a-5934-9780-ec038290f603"
+            },
+            "target": {
+              "cell": "38a29c07-67df-58f7-a27c-087d5c742309"
+            }
+          },
+          {
+            "id": "ab843a2d-0ddf-5146-932c-fce84659a607",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Typed broker request",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "Unix socket",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "ee61185c-defe-5bcb-bb32-01624d62648b",
+                  "threatId": "ee61185c-defe-5bcb-bb32-01624d62648b",
+                  "number": 30,
+                  "title": "Forged actor metadata in broker requests",
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "The app asserts the actor; the broker must not trust it blindly.",
+                  "mitigation": "Peer-UID audit, typed operations, policy revalidation per call; asserted actor is logged, not authoritative.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ]
+            },
+            "source": {
+              "cell": "38a29c07-67df-58f7-a27c-087d5c742309"
+            },
+            "target": {
+              "cell": "11286275-0d44-5fac-a7d4-a0d80868e255"
+            }
+          },
+          {
+            "id": "ab2cb958-9b7e-544a-85d8-224b351beec0",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Desired state, sessions, audit",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "SQLite (local file)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "38a29c07-67df-58f7-a27c-087d5c742309"
+            },
+            "target": {
+              "cell": "29ee97b4-4365-5cbf-aa6a-5cca31ea18c8"
+            }
+          },
+          {
+            "id": "89e9f6a7-7194-5896-ad25-137ccf9db262",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Writes units and secrets as root",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "filesystem",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "11286275-0d44-5fac-a7d4-a0d80868e255"
+            },
+            "target": {
+              "cell": "d532cd7a-1675-5e85-805f-9ef1112451b2"
+            }
+          },
+          {
+            "id": "bc2ab4d6-3760-5d2d-bb76-20f4deb1362f",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Account, subuid, linger, start",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "systemd / D-Bus",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "11286275-0d44-5fac-a7d4-a0d80868e255"
+            },
+            "target": {
+              "cell": "32b220ef-d786-50d6-b01f-28839881b6ff"
+            }
+          },
+          {
+            "id": "87160b89-609b-5a9e-9b88-3ddd020661e7",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Proxy to loopback upstream",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP (127.0.0.1:1800x)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "32c24a9f-4d9b-5ab9-b9c6-5bbb9f5ca723"
+            },
+            "target": {
+              "cell": "32b220ef-d786-50d6-b01f-28839881b6ff"
+            }
+          },
+          {
+            "id": "0edfd808-8003-5030-83de-7de6c7f39af3",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Image pull at start",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS",
+              "isEncrypted": true,
+              "isPublicNetwork": true,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "137b7628-8792-5726-a7af-9877a2548b3b",
+                  "threatId": "137b7628-8792-5726-a7af-9877a2548b3b",
+                  "number": 31,
+                  "title": "Registry egress used for data exfiltration",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "description": "Host egress exists for image pulls; a compromised workload could try to reuse it.",
+                  "mitigation": "Egress only at pull time to allowlisted registries; tenant workloads have no egress; firewall allowlist.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ]
+            },
+            "source": {
+              "cell": "32b220ef-d786-50d6-b01f-28839881b6ff"
+            },
+            "target": {
+              "cell": "4324879f-c09c-5eba-b4bc-9d7ec6f1322b"
+            }
+          },
+          {
+            "id": "3fc70d2c-23da-557b-b239-2d7f6684477b",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Approved logs via Fluent Bit/TLS",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS (HEC)",
+              "isEncrypted": true,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "38a29c07-67df-58f7-a27c-087d5c742309"
+            },
+            "target": {
+              "cell": "c42077ff-88be-550b-bdb3-e7de774942b2"
+            }
+          },
+          {
+            "id": "7e7ce808-8057-5025-a322-f782aada2deb",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "CTI findings",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS",
+              "isEncrypted": true,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "65544ad1-8d30-5e54-a368-8aa135dbdf27"
+            },
+            "target": {
+              "cell": "c42077ff-88be-550b-bdb3-e7de774942b2"
+            }
+          }
+        ]
+      },
+      {
+        "name": "",
+        "title": "Tenant service plane — four demo services (STRIDE)",
+        "description": "Per-tenant isolation, loopback publication and the four demo services: blog, shop database, media vault and git forge.",
+        "diagramType": "STRIDE",
+        "thumbnail": "./public/content/images/thumbnail.stride.jpg",
+        "version": "2.0.0",
+        "id": 1,
+        "cells": [
+          {
+            "id": "5321ae2c-8846-5b84-bb16-90dc84b794c7",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 300,
+              "y": 60
+            },
+            "size": {
+              "width": 720,
+              "height": 420
+            },
+            "attrs": {
+              "label": {
+                "text": "TB Tenant t91 netns (snp-t91, Internal=true)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB Tenant t91 netns (snp-t91, Internal=true)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "8f25ff73-377e-599b-8da6-db32706a00cf",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 880,
+              "y": 240
+            },
+            "size": {
+              "width": 300,
+              "height": 120
+            },
+            "attrs": {
+              "label": {
+                "text": "TB Broker secrets (root-owned)"
+              }
+            },
+            "zIndex": -50,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "TB Broker secrets (root-owned)",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "id": "b52f51e0-e94f-55c6-bd60-b5ef800c39c9",
+            "shape": "process",
+            "position": {
+              "x": 40,
+              "y": 200
+            },
+            "size": {
+              "width": 140,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Caddy edge"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Caddy edge",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "f8bc1525-ef7a-502c-a8c9-05ef89d05e04",
+                  "threatId": "f8bc1525-ef7a-502c-a8c9-05ef89d05e04",
+                  "number": 32,
+                  "title": "Per-tenant bandwidth exhaustion",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Denial of service",
+                  "description": "Tenant traffic crosses the edge; one tenant can saturate the link.",
+                  "mitigation": "Edge/WAF rate limiting; per-vhost accounting from Caddy access logs.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "rootless, public 80/443"
+            }
+          },
+          {
+            "id": "788dfe5c-5c0f-57b0-8aec-76c0901bc9b7",
+            "shape": "process",
+            "position": {
+              "x": 340,
+              "y": 100
+            },
+            "size": {
+              "width": 160,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Blog nginx (web)"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Blog nginx (web)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "1dacd6d0-8418-5ed1-bed7-768892613e7b",
+                  "threatId": "1dacd6d0-8418-5ed1-bed7-768892613e7b",
+                  "number": 33,
+                  "title": "Tenant content defacement",
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Tampering",
+                  "description": "The blog content is writable by the tenant.",
+                  "mitigation": "Content owned by the tenant; no host mounts; backups and audit.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "uid 101, read-only root"
+            }
+          },
+          {
+            "id": "074c087a-37ce-5a6c-a8b7-969af2663f64",
+            "shape": "process",
+            "position": {
+              "x": 340,
+              "y": 260
+            },
+            "size": {
+              "width": 170,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Shop PostgreSQL (database)"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Shop PostgreSQL (database)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "c503d910-70a6-517b-994e-06d3b8ea5bc3",
+                  "threatId": "c503d910-70a6-517b-994e-06d3b8ea5bc3",
+                  "number": 34,
+                  "title": "Database brute force on loopback",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "The database is published on 127.0.0.1:15521.",
+                  "mitigation": "scram-sha-256, loopback-only publication, operator-mediated console, fail2ban.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "98859e10-c0ed-543b-b78f-b499a82b3a56",
+                  "threatId": "98859e10-c0ed-543b-b78f-b499a82b3a56",
+                  "number": 35,
+                  "title": "Database credentials exposed",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Information disclosure",
+                  "description": "The broker generates the database password.",
+                  "mitigation": "Root-owned 0600 env file, never stored in app SQL, jobs or audit.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "uid 70, loopback only"
+            }
+          },
+          {
+            "id": "2bf5c81a-572d-5722-865a-b87594b23413",
+            "shape": "process",
+            "position": {
+              "x": 620,
+              "y": 100
+            },
+            "size": {
+              "width": 190,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Media vault File Browser (storage)"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Media vault File Browser (storage)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "0eb69636-26ba-50ec-bd49-a3bcdf938466",
+                  "threatId": "0eb69636-26ba-50ec-bd49-a3bcdf938466",
+                  "number": 36,
+                  "title": "File-manager settings relabeled by the tenant",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "The settings file is root-owned; the tenant's Podman cannot relabel it.",
+                  "mitigation": "Broker labels the file for containers; mount is read-only without :Z.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "a2a17185-a2b0-507a-8860-cbbe11a39350",
+                  "threatId": "a2a17185-a2b0-507a-8860-cbbe11a39350",
+                  "number": 37,
+                  "title": "Media vault exposed without MIME inspection or quota",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "description": "Uploaded media is served without MIME inspection; disk quota is not applied.",
+                  "mitigation": "Operator decision required; MIME inspection and quota are not integrated.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "uid 1000, read-only root"
+            }
+          },
+          {
+            "id": "3ccfb753-8505-5b0b-996e-483cf29500ca",
+            "shape": "process",
+            "position": {
+              "x": 620,
+              "y": 260
+            },
+            "size": {
+              "width": 170,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Git forge Forgejo (git)"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Process",
+              "name": "Git forge Forgejo (git)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "35b534c4-6220-5607-b839-38ba861a08f2",
+                  "threatId": "35b534c4-6220-5607-b839-38ba861a08f2",
+                  "number": 38,
+                  "title": "First-run install page takeover",
+                  "status": "Open",
+                  "severity": "High",
+                  "type": "Spoofing",
+                  "description": "Forgejo serves an install page until the admin account exists.",
+                  "mitigation": "Complete the admin account immediately after activation; loopback-only until then.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                },
+                {
+                  "id": "74cdccd5-1a1a-5a6a-9e5a-d0c9d61aae02",
+                  "threatId": "74cdccd5-1a1a-5a6a-9e5a-d0c9d61aae02",
+                  "number": 39,
+                  "title": "Git SSH brute force on the public port",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Tampering",
+                  "description": "The git SSH port (22091) is a public exception.",
+                  "mitigation": "Key-only authentication, dedicated port, fail2ban, allowlist.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "privilegeLevel": "uid 1000, git SSH 22091"
+            }
+          },
+          {
+            "id": "2333ca03-48c3-5d59-8836-d797766dea1e",
+            "shape": "store",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "size": {
+              "width": 160,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Tenant volumes"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Store",
+              "name": "Tenant volumes",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "6589816c-adec-53af-b2d9-4bb2bf07f84f",
+                  "threatId": "6589816c-adec-53af-b2d9-4bb2bf07f84f",
+                  "number": 40,
+                  "title": "Volume data readable across services of the same tenant",
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Information disclosure",
+                  "description": "All services of one tenant share the tenant UID.",
+                  "mitigation": "Same-tenant trust domain is documented; per-service UID separation is future work.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ]
+            }
+          },
+          {
+            "id": "1a480db3-3e52-5ffe-aea8-6a8bb0ecad9e",
+            "shape": "store",
+            "position": {
+              "x": 900,
+              "y": 260
+            },
+            "size": {
+              "width": 160,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Broker secrets"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Store",
+              "name": "Broker secrets",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "id": "3e1d8075-43f8-5943-89f3-9b835beafe1d",
+                  "threatId": "3e1d8075-43f8-5943-89f3-9b835beafe1d",
+                  "number": 41,
+                  "title": "Secret values rendered in the panel",
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Information disclosure",
+                  "description": "Inspection could expose environment values.",
+                  "mitigation": "Keys-only inspection, redaction, root-only files.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "storesCredentials": true
+            }
+          },
+          {
+            "id": "a4bf5231-b40e-5933-853f-7db91fd2bedf",
+            "shape": "actor",
+            "position": {
+              "x": 40,
+              "y": 420
+            },
+            "size": {
+              "width": 150,
+              "height": 60
+            },
+            "attrs": {
+              "text": {
+                "text": "Operator DB access"
+              },
+              "body": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "strokeDasharray": null
+              }
+            },
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Actor",
+              "name": "Operator DB access",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "600167ff-ac15-5590-bc44-e0b6dc43912e",
+                  "threatId": "600167ff-ac15-5590-bc44-e0b6dc43912e",
+                  "number": 42,
+                  "title": "Operator tunnel compromise",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "The operator reaches the database through a loopback tunnel.",
+                  "mitigation": "SSH keys only, loopback binding, audit of operator actions.",
+                  "modelType": "STRIDE",
+                  "new": false,
+                  "score": ""
+                }
+              ],
+              "providesAuthentication": true
+            }
+          },
+          {
+            "id": "dbdc6a0c-717a-5df8-b9c2-fea0706a45fe",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Proxy 18091",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP (127.0.0.1:18091)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "b52f51e0-e94f-55c6-bd60-b5ef800c39c9"
+            },
+            "target": {
+              "cell": "788dfe5c-5c0f-57b0-8aec-76c0901bc9b7"
+            }
+          },
+          {
+            "id": "be1aa71d-069d-57e7-8c01-b5c7b24662cf",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Proxy 19091",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP (127.0.0.1:19091)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "b52f51e0-e94f-55c6-bd60-b5ef800c39c9"
+            },
+            "target": {
+              "cell": "2bf5c81a-572d-5722-865a-b87594b23413"
+            }
+          },
+          {
+            "id": "2f47f570-95b3-5020-91a1-cb4c197e974a",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Proxy 20091",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP (127.0.0.1:20091)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "b52f51e0-e94f-55c6-bd60-b5ef800c39c9"
+            },
+            "target": {
+              "cell": "3ccfb753-8505-5b0b-996e-483cf29500ca"
+            }
+          },
+          {
+            "id": "14235233-91bd-51ac-b11c-94ed73a168d4",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "psql 15521",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "PostgreSQL (127.0.0.1:15521)",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "a4bf5231-b40e-5933-853f-7db91fd2bedf"
+            },
+            "target": {
+              "cell": "074c087a-37ce-5a6c-a8b7-969af2663f64"
+            }
+          },
+          {
+            "id": "fa8d6547-eebd-50a2-bfca-1c70055a38ed",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Read-only site",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "bind mount",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "788dfe5c-5c0f-57b0-8aec-76c0901bc9b7"
+            },
+            "target": {
+              "cell": "2333ca03-48c3-5d59-8836-d797766dea1e"
+            }
+          },
+          {
+            "id": "2c218c2a-7907-5f5a-be78-157bd16dc8ee",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Vault and database",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "bind mount",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "2bf5c81a-572d-5722-865a-b87594b23413"
+            },
+            "target": {
+              "cell": "2333ca03-48c3-5d59-8836-d797766dea1e"
+            }
+          },
+          {
+            "id": "a5d39a73-0f3b-532d-86e0-bd8a342eb756",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Gitea data and config",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "bind mount",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "3ccfb753-8505-5b0b-996e-483cf29500ca"
+            },
+            "target": {
+              "cell": "2333ca03-48c3-5d59-8836-d797766dea1e"
+            }
+          },
+          {
+            "id": "027e1167-41fb-518b-bb2a-1885a786f0d2",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Settings file (read-only)",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "bind mount",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "2bf5c81a-572d-5722-865a-b87594b23413"
+            },
+            "target": {
+              "cell": "1a480db3-3e52-5ffe-aea8-6a8bb0ecad9e"
+            }
+          },
+          {
+            "id": "ab167caf-775d-5a64-b38d-95e851fe6f1f",
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "strokeWidth": 1,
+                "targetMarker": {
+                  "name": "block"
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "Environment file",
+              "description": "",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "EnvironmentFile",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            },
+            "source": {
+              "cell": "3ccfb753-8505-5b0b-996e-483cf29500ca"
+            },
+            "target": {
+              "cell": "1a480db3-3e52-5ffe-aea8-6a8bb0ecad9e"
+            }
+          }
+        ]
+      }
+    ],
+    "diagramTop": 2,
+    "reviewer": "AgileCTI",
+    "threatTop": 42
+  }
+}

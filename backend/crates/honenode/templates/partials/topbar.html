@@ -1,0 +1,18 @@
+<header class="topbar">
+  <a class="brand" href="{% if principal.has_principal %}{% if principal.is_operator %}/operator{% else %}/portal{% endif %}{% else %}/login{% endif %}">
+    <span class="mark" aria-hidden="true">◆</span>
+    <span>{% if principal.is_sharpnode %}SharpNode{% else %}HoneNode{% endif %}</span>
+    <span class="sub">{% if principal.has_principal %}{% if principal.is_operator %}Administración{% else %}Servicios{% endif %}{% else %}Acceso{% endif %}</span>
+  </a>
+  <div class="session-nav">
+    {% if principal.has_principal %}
+      <span class="who"><span class="mono">{{ principal.number }}</span> · {{ principal.role_label }}</span>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf" value="{{ principal.csrf }}">
+        <button type="submit" class="link-button">Salir</button>
+      </form>
+    {% else %}
+      <a href="/login">Entrar</a>
+    {% endif %}
+  </div>
+</header>

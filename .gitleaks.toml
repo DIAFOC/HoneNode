@@ -1,0 +1,15 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Test fixtures, documentation examples and the STRIDE evidence"
+paths = [
+  '''backend/crates/honenode/src/tests\.rs''',
+  '''backend/crates/honenode/src/observation_tests\.rs''',
+  '''backend/crates/honenode/src/portal_service_tests\.rs''',
+  '''backend/crates/honenode/src/provisioning_tests\.rs''',
+  '''backend/crates/honenode/tests/.*''',
+  '''packaging/tests/.*''',
+  '''backend/crates/honenode/SIGNUP_BILLING\.md''',
+  '''security/HoneNode_Threat_Model_STRIDE\.json''',
+]

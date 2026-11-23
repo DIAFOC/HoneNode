@@ -1,0 +1,293 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  rust:
+    name: Rust format, lints and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend -> target
+      - name: Format (advisory)
+        continue-on-error: true
+        working-directory: backend
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        working-directory: backend
+        run: cargo clippy --all-targets --all-features
+      - name: Tests
+        working-directory: backend
+        run: cargo test --all-targets --all-features
+      - name: Release build
+        working-directory: backend
+        run: cargo build --release --locked
+
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend -> target
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Release binaries for packaging tests
+        run: cargo build --release --locked --manifest-path backend/Cargo.toml
+      - name: Application tests
+        run: python -m unittest discover -s backend/crates/honenode/tests -v
+      - name: Packaging tests
+        run: python -m unittest discover -s packaging/tests -v
+
+  security:
+    name: Security analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo Audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: backend
+
+      - name: Cargo Deny
+        if: always()
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: backend/Cargo.toml
+          command: check
+
+      - name: Semgrep SAST
+        if: always()
+        run: |
+          python -m pip install --upgrade pip semgrep
+          semgrep scan \
+            --metrics off \
+            --config p/security-audit \
+            --config p/secrets \
+            --config security/semgrep.yml \
+            --severity ERROR \
+            --error \
+            --sarif \
+            --output semgrep.sarif \
+            --exclude '**/tests/**' \
+            --exclude '**/tests.rs' \
+            --exclude '**/*_tests.rs' \
+            --exclude '**/*.md' \
+            --exclude 'security/HoneNode_Threat_Model_STRIDE.json' \
+            .
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+      - name: Trivy filesystem scan
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          skip-files: 'backend/crates/honenode/src/tests.rs,backend/crates/honenode/src/observation_tests.rs,backend/crates/honenode/src/portal_service_tests.rs,backend/crates/honenode/src/provisioning_tests.rs,backend/crates/honenode/tests/*,packaging/tests/*,backend/crates/honenode/SIGNUP_BILLING.md,security/HoneNode_Threat_Model_STRIDE.json'
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+      - name: Gitleaks
+        if: always()
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: OSV-Scanner
+        if: always()
+        continue-on-error: true
+        run: |
+          curl -sSfL "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --lockfile=backend/Cargo.lock --format sarif --output osv-scanner.sarif || true
+      - name: Upload OSV-Scanner SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: osv-scanner.sarif
+          category: osv-scanner
+
+      - name: ShellCheck
+        if: always()
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          find packaging -name '*.sh' -print0 | xargs -0 -r shellcheck -x -S error
+      - name: Hadolint
+        if: always()
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: backend/Containerfile
+          failure-threshold: error
+      - name: Actionlint (advisory)
+        if: always()
+        continue-on-error: true
+        uses: docker://rhysd/actionlint:latest
+        with:
+          args: -color
+
+      - name: Dependency review
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+
+  dast:
+    name: ZAP baseline DAST
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build app image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Containerfile
+          tags: honenode-app:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start app
+        run: |
+          docker run -d --name honenode-app \
+            -p 127.0.0.1:8088:8080 \
+            -e HONE_BIND=0.0.0.0:8080 \
+            -e HONE_REGISTRY=/tmp/registry.db \
+            -e HONE_STATIC_DIR=/app/static \
+            -e HONE_TENANTS=t91 \
+            -e HONE_SECURE_COOKIES=false \
+            -e HONE_SERVICE_ACCESS=public \
+            honenode-app:ci
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8088/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8088/healthz
+      - name: ZAP baseline
+        continue-on-error: true
+        run: |
+          mkdir -p zap
+          chmod 0777 zap
+          docker run --rm --network host \
+            -v "$PWD/zap:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:8088/ -m 1 -I \
+              -r zap-report.html -J zap-report.json -w zap-report.md
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: zap/
+      - name: App logs
+        if: always()
+        run: docker logs honenode-app || true
+      - name: Stop app
+        if: always()
+        run: docker stop honenode-app || true
+
+  openscap:
+    name: OpenSCAP CIS scan (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: quay.io/rockylinux/rockylinux:10
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+      - run: dnf -y install openscap-scanner scap-security-guide
+      - name: Evaluate CIS profile
+        run: |
+          profile=$(find /usr/share/xml/scap/ssg/content \
+            \( -name 'ssg-rl10-ds.xml' -o -name 'ssg-rhel10-ds.xml' -o -name 'ssg-rhel9-ds.xml' \) \
+            | head -1)
+          test -n "$profile"
+          oscap xccdf eval --profile cis \
+            --results /tmp/oscap-results.xml \
+            --report /tmp/oscap-report.html \
+            "$profile" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: openscap-report
+          path: |
+            /tmp/oscap-results.xml
+            /tmp/oscap-report.html
+
+  lynis:
+    name: Lynis host audit (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: quay.io/rockylinux/rockylinux:10
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+      - run: dnf -y install epel-release || true
+      - run: dnf -y install lynis
+      - run: lynis audit system --quick --no-colors > /tmp/lynis.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lynis-report
+          path: /tmp/lynis.log
+
+  smoke-rocky:
+    name: Rocky 10 full smoke (advisory on GitHub)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    container:
+      image: quay.io/rockylinux/rockylinux:10
+      options: --privileged --cgroupns=host
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Podman
+        run: dnf -y install podman passt
+      - name: Run Rocky smoke
+        run: bash packaging/rocky/run_smoke_podman.sh

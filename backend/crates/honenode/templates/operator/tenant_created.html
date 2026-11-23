@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Inquilino creado</h1>
+<p class="lede">
+  Estos datos se muestran una sola vez. No hay correo en el circuito: la entrega es manual.
+</p>
+<section class="card accented">
+  <dl class="meta">
+    <dt>Slug</dt><dd class="mono">{{ slug }}</dd>
+    <dt>Nombre</dt><dd>{{ name }}</dd>
+    <dt>Número de cuenta</dt><dd class="mono">{{ account_number }}</dd>
+    <dt>Contraseña</dt><dd class="mono">{{ password }}</dd>
+    <dt>Cuenta Unix</dt>
+    <dd>
+      {% if outcome_ok %}
+        <span class="badge ok">creada por el broker</span>
+      {% else %}
+        <span class="badge danger">el broker la rechazó</span>
+      {% endif %}
+    </dd>
+  </dl>
+  {% if has_broker_note %}
+  <div class="notice danger"><p>{{ broker_note }}</p></div>
+  {% endif %}
+</section>
+<div class="actions">
+  <a href="/operator/tenants/{{ tenant_id }}">Abrir el inquilino</a>
+  <a href="/operator/tenants">Volver</a>
+</div>
+{% endblock %}

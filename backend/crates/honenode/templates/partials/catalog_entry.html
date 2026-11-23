@@ -1,0 +1,28 @@
+<header class="panel-heading">
+  <div>
+    <p class="eyebrow mono">{{ entry.plan_code }}</p>
+    <h2>{{ entry.label }}</h2>
+  </div>
+  {% if entry.can_provision %}<span class="badge ok">Disponible</span>{% else %}<span class="badge muted">No disponible</span>{% endif %}
+</header>
+<dl class="resource-list">
+  <div><dt>Memoria · umbral</dt><dd>{{ entry.memory_high }}</dd></div>
+  <div><dt>Memoria · máximo</dt><dd>{{ entry.memory_max }}</dd></div>
+  <div><dt>Cuota CPU</dt><dd>{{ entry.cpu_quota_percent }}%</dd></div>
+  <div><dt>Tareas · máximo</dt><dd>{{ entry.tasks_max }}</dd></div>
+  <div><dt>Servicios · máximo por inquilino</dt><dd>{{ entry.max_services }}</dd></div>
+  <div><dt>Duración incluida</dt><dd>{{ entry.service_days }} días</dd></div>
+</dl>
+<details class="image-list">
+  <summary>Imágenes del catálogo</summary>
+  <dl class="meta">
+    {% for (kind, image) in entry.images %}
+    <dt>{{ kind }}</dt>
+    <dd>{% match image %}{% when Some with (reference) %}<code>{{ reference }}</code>{% when None %}Sin imagen declarada{% endmatch %}</dd>
+    {% endfor %}
+  </dl>
+  <p class="hint">Referencias informativas de la política autorizada. No se admiten imágenes personalizadas.</p>
+</details>
+{% if !entry.reserved_kinds.is_empty() %}
+<p class="hint">Tipos en uso: {% for kind in entry.reserved_kinds %}<span class="badge muted">{{ kind }}</span> {% endfor %}. Puedes crear otra instancia del mismo tipo si el plan y los recursos lo permiten.</p>
+{% endif %}

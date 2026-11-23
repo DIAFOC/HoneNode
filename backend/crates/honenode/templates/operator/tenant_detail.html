@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ tenant_name }}</h1>
+<p class="lede">Inquilino <span class="mono">{{ tenant_slug }}</span> · {{ status_label }}</p>
+
+<div class="grid cols-2">
+  <section class="card">
+    <h3>Identidad</h3>
+    <dl class="meta">
+      <dt>Slug</dt><dd class="mono">{{ tenant_slug }}</dd>
+      <dt>Estado</dt><dd><span class="badge {{ status_class }}">{{ status_label }}</span></dd>
+      <dt>Creado</dt><dd>{{ created }}</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h3>Política de provisión</h3>
+    <p>Los recursos, la duración y los tipos disponibles proceden del catálogo autorizado. La disponibilidad se valida de nuevo al crear el servicio.</p>
+    <p class="hint">Eliminar un servicio libera su tipo, puerto y volúmenes para volver a desplegar. No se admiten imágenes personalizadas, importación ni acceso a shell.</p>
+    <p class="hint">El almacenamiento requiere las credenciales iniciales del gestor de archivos, que solo recoge el asistente del inquilino en su catálogo de imágenes. Este formulario sigue disponible para web y base de datos.</p>
+  </section>
+</div>
+
+<h2>Alta de servicio</h2>
+{% if has_entries %}
+<div class="catalog-grid">
+  {% for entry in entries %}
+  <section class="catalog-panel" aria-label="Plan {{ entry.label }}">
+    {% include "partials/catalog_entry.html" %}
+    {% if entry.can_provision %}
+    <form class="provision-form" method="post" action="/operator/tenants/{{ tenant_id }}/services">
+      {% include "partials/provision_fields.html" %}
+    </form>
+    {% else %}
+    <p class="empty">No disponible: límite de servicios alcanzado o tipos ya reservados.</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">No hay planes autorizados disponibles para este inquilino.</p>
+{% endif %}
+
+{% if has_plans %}
+<details class="reference-plans">
+  <summary>Referencia comercial local · no modifica la política de provisión</summary>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Plan</th><th>Precio MXN/mes</th><th>Descripción</th></tr></thead>
+      <tbody>{% for plan in plans %}<tr><td class="mono">{{ plan.code }}</td><td>{{ plan.price }}</td><td>{{ plan.description }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  <p class="hint">Tipos registrados: {% for kind in kind_options %}{{ kind.label }} · {% endfor %}la selección efectiva depende del catálogo autorizado de arriba.</p>
+</details>
+{% endif %}
+
+<h2>Servicios</h2>
+{% include "partials/services_table.html" %}
+
+<h2>Eliminar inquilino</h2>
+<section class="card">
+  <p>Elimina los servicios del inquilino a través del broker y borra su cuenta y su registro del panel. La cuenta Unix del host y los datos de los volúmenes se conservan.</p>
+  <form method="post" action="/operator/tenants/{{ tenant_id }}/delete">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="actions"><button type="submit">Eliminar inquilino</button></div>
+  </form>
+</section>
+
+<h2>Actividad</h2>
+{% include "partials/audit_table.html" %}
+{% endblock %}

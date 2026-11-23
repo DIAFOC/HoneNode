@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ tenant_name }}</h1>
+<p class="lede">
+  Tus servicios{% if principal.is_sharpnode %} en SharpNode{% endif %}. El portal enlaza a cada servicio; no los embebe ni los
+  proxya, así que cada uno conserva su propia interfaz.
+</p>
+
+{% if has_notice %}
+<div class="notice danger"><p>{{ notice_message }}</p></div>
+{% endif %}
+
+{% if has_redeemed %}
+<div class="notice"><p>Clave canjeada: +{{ redeemed_days }} días de plan añadidos a tus servicios.</p></div>
+{% endif %}
+{% if has_redeem_error %}
+<div class="notice danger"><p>{{ redeem_error }}</p></div>
+{% endif %}
+
+<div class="grid cols-3">
+  {% for stat in stats %}
+  <div class="card">
+    <h3>{{ stat.label }}</h3>
+    <div class="value">{{ stat.value }}</div>
+    <div class="unit">{{ stat.unit }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<section class="card">
+  <h3>Plan y tiempo</h3>
+  {% if has_subscription %}
+  <dl class="resource-list">
+    <div><dt>Plan actual</dt><dd class="mono">{{ plan_code }}</dd></div>
+    <div><dt>Pagado hasta</dt><dd>{{ paid_through }}</dd></div>
+    <div><dt>Días restantes</dt><dd>{{ subscription_days }}</dd></div>
+  </dl>
+  {% if trial_expired %}
+  <div class="notice danger"><p>Tu plan expiró: canjea una clave de recarga para volver a provisionar y reactivar servicios.</p></div>
+  {% endif %}
+  {% else %}
+  <p class="hint">Sin suscripción registrada: tu cuenta la gestiona el operador directamente.</p>
+  {% endif %}
+  <form method="post" action="/portal/redeem" class="provision-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="field">
+      <label for="code">Clave de recarga</label>
+      <input type="text" id="code" name="code" required maxlength="24"
+             placeholder="HN-XXXX-XXXX-XXXX-XXXX" autocomplete="off">
+    </div>
+    <div class="actions"><button class="primary" type="submit">Canjear clave</button></div>
+  </form>
+  <p class="hint">Las claves las emite el operador y añaden días de plan de forma aditiva.</p>
+</section>
+
+<div class="section-heading"><h2>Mis servicios</h2><a class="button primary" href="/portal/containers/new">Nuevo servicio</a></div>
+{% include "partials/tenant_services_table.html" %}
+
+<h2>Actividad</h2>
+{% include "partials/audit_table.html" %}
+{% endblock %}

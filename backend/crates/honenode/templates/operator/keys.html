@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Claves de recarga</h1>
+<p class="lede">
+  Tiempo de plan prepagado: generas claves, los inquilinos las canjean en su panel.
+  El registro guarda solo el hash de cada código; el código completo se muestra una vez.
+</p>
+
+<section class="card">
+  <h3>Generar claves</h3>
+  {% if has_error %}
+  <div class="notice danger"><p>{{ error }}</p></div>
+  {% endif %}
+  <form method="post" action="/operator/keys">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="field">
+      <label for="plan_code">Código de plan</label>
+      <input type="text" id="plan_code" name="plan_code" value="{{ plan_code }}"
+             required maxlength="32" pattern="[a-z0-9\-]+" placeholder="pro">
+    </div>
+    <div class="field">
+      <label for="days">Días de plan</label>
+      <input type="number" id="days" name="days" value="{{ days }}" min="1" max="3650" required>
+    </div>
+    <div class="field">
+      <label for="count">Cantidad</label>
+      <input type="number" id="count" name="count" value="{{ count }}" min="1" max="50" required>
+    </div>
+    <div class="actions"><button class="primary" type="submit">Generar</button></div>
+  </form>
+  <p class="hint">Usa planes que la política del nodo entitle (p. ej. <code>starter</code> o <code>pro</code> en la política de autoservicio).</p>
+</section>
+
+<h2>Historial</h2>
+{% if has_keys %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Prefix</th>
+        <th>Plan</th>
+        <th>Días</th>
+        <th>Creada</th>
+        <th>Estado</th>
+        <th>Canjeada por</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key in keys %}
+      <tr>
+        <td class="mono">{{ key.prefix }}…</td>
+        <td class="mono">{{ key.plan_code }}</td>
+        <td>{{ key.days }}</td>
+        <td>{{ key.created }}</td>
+        <td><span class="badge {{ key.status_class }}">{% if key.claimed_by != "—" %}Canjeada{% else %}Disponible{% endif %}</span></td>
+        <td class="mono">{{ key.claimed_by }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">Todavía no hay claves generadas.</p>
+{% endif %}
+{% endblock %}

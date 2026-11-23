@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es" class="{{ principal.theme_class }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>{{ title }} · HoneNode</title>
+  <link rel="stylesheet" href="/static/hone.css">
+  <script src="/static/hone.js" defer></script>
+</head>
+<body class="{{ accent_class }}{% if principal.has_principal %} authenticated{% if principal.is_operator %} operator-console{% else %} tenant-console{% endif %}{% endif %}">
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+  {% include "partials/topbar.html" %}
+  <div class="workspace">
+    {% if principal.has_principal %}
+    <aside class="sidebar">
+      {% include "partials/sidebar.html" %}
+      {% block sidebar_summary %}{% endblock %}
+    </aside>
+    {% endif %}
+    <main id="main" tabindex="-1">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <footer>
+    <span>HoneNode · plano de gestión{% if principal.is_sharpnode %} de SharpNode{% endif %}</span>
+    <a href="/healthz">estado</a>
+  </footer>
+</body>
+</html>

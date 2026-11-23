@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Auditoría</h1>
+<p class="lede">
+  Esquema inspirado en ECS: ts · request_id · tenant_id · actor · action · resource ·
+  outcome · reason · src_ip · user_agent. Siempre activo, con o sin SIEM.
+</p>
+{% include "partials/audit_table.html" %}
+{% endblock %}

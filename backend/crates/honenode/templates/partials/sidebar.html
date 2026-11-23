@@ -1,0 +1,23 @@
+<nav class="sidenav" aria-label="Navegación principal">
+  {% if principal.is_operator %}
+  <p class="nav-label">Administración</p>
+  <a href="/operator"{% if title == "Panel de operador" %} aria-current="page"{% endif %}>Resumen del host</a>
+  <a href="/operator/tenants"{% if title == "Inquilinos" || title == "Inquilino" || title == "Inquilino creado" %} aria-current="page"{% endif %}>Inquilinos</a>
+  <a href="/operator/services"{% if title == "Servicios" %} aria-current="page"{% endif %}>Servicios</a>
+  <a href="/operator/catalog"{% if title == "Catálogo" %} aria-current="page"{% endif %}>Catálogo</a>
+  <a href="/operator/keys"{% if title == "Claves de recarga" || title == "Claves generadas" %} aria-current="page"{% endif %}>Claves de recarga</a>
+  <p class="nav-label">Operaciones</p>
+  <a href="/operator/jobs"{% if title == "Trabajos" %} aria-current="page"{% endif %}>Trabajos</a>
+  <a href="/operator/audit"{% if title == "Auditoría" %} aria-current="page"{% endif %}>Auditoría</a>
+  {% else %}
+  <p class="nav-label">Mi espacio</p>
+  <a href="/portal/containers/new">Nuevo servicio</a>
+  <a href="/portal"{% if title == "Mis servicios" %} aria-current="page"{% endif %}>Mis servicios</a>
+  <a href="/portal/images"{% if title == "Imágenes" || title == "Desplegar" %} aria-current="page"{% endif %}>Catálogo de imágenes</a>
+  <a href="/portal/catalog"{% if title == "Catálogo" %} aria-current="page"{% endif %}>Planes</a>
+  <a href="/portal/audit"{% if title == "Actividad" %} aria-current="page"{% endif %}>Actividad</a>
+  <p class="nav-label">Referencias</p>
+  <a href="/portal/registry"{% if title == "Registro de confianza" %} aria-current="page"{% endif %}>Registro de confianza</a>
+  <a href="/portal/images#registries">Registros de imágenes</a>
+  {% endif %}
+</nav>

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login">
+  <section class="card accented">
+    <h1>Cuenta creada</h1>
+    <p class="lede">Bienvenido, {{ name }}. Estas son tus credenciales: se muestran <strong>una sola vez</strong>.</p>
+    <div class="notice">
+      <p>Guárdalas ahora en un entorno seguro (gestor de contraseñas o papel guardado). No habrá correo de recuperación: el operador media cualquier recuperación.</p>
+    </div>
+    <dl class="resource-list">
+      <div><dt>Número de cuenta</dt><dd class="mono">{{ account_number }}</dd></div>
+      <div><dt>Contraseña</dt><dd class="mono">{{ password }}</dd></div>
+      <div><dt>Plan</dt><dd>Prueba de {{ trial_days }} días · hasta dos servicios</dd></div>
+    </dl>
+    {% if has_broker_note %}
+    <div class="notice danger">
+      <p>La cuenta quedó registrada, pero el agente del host no pudo preparar el espacio del inquilino: {{ broker_note }}. Contacta con el operador antes de provisionar servicios.</p>
+    </div>
+    {% else if !outcome_ok %}
+    <div class="notice danger"><p>La cuenta quedó pendiente de activación.</p></div>
+    {% endif %}
+    <div class="actions">
+      <a class="button primary" href="/login">Entrar con mis credenciales</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

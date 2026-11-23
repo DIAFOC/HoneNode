@@ -1,0 +1,42 @@
+{% if has_services %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>Unidad</th>
+        <th>Objetivo</th>
+        <th>Última observación</th>
+        <th class="num">Días</th>
+        <th>Acceso</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for service in services %}
+      <tr>
+        <td>
+          <span class="kind {{ service.kind_tone }}">
+            <span class="dot" aria-hidden="true"></span>{{ service.kind_label }}
+          </span>
+        </td>
+        <td class="mono">{{ service.unit_name }}</td>
+        <td><span class="badge {{ service.state_class }}">{{ service.state_label }}</span></td>
+        <td class="mono">{{ service.observed }}</td>
+        <td class="num">{{ service.days }}</td>
+        <td>
+          {% if service.has_public_url %}
+            <a href="{{ service.public_url }}" target="_blank" rel="noopener">Abrir</a>
+          {% else %}
+            acceso mediante operador
+          {% endif %}
+        </td>
+        <td><a href="/portal/services/{{ service.id }}">Detalle</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><h3>Tu espacio está listo</h3><p>Todavía no tienes servicios. Consulta las imágenes aprobadas y los planes autorizados para tu cuenta.</p><a class="button primary" href="/portal/images">Crear mi primer servicio</a></div>
+{% endif %}

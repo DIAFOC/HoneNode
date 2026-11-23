@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Contenedor · configuración</h1><p>{{ tenant_name }} · <span class="mono">{{ unit }}</span></p>
+{% include "partials/service_tabs.html" %}
+<p>Inspección de solo lectura del agente. Variables: solo claves, nunca valores. Editar entorno o volúmenes después de crear no está soportado.</p>
+<pre class="log-view">{{ info }}</pre>
+<a href="/portal/services/{{ service_id }}/configuration">Actualizar inspección</a>
+{% endblock %}

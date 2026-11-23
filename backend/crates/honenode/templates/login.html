@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login">
+  <section class="card accented">
+    <h1>HoneNode</h1>
+    <p class="lede">Plano de gestión{% if principal.is_sharpnode %} de SharpNode{% endif %}. Acceso por número de cuenta.</p>
+    {% if has_error %}
+      <div class="notice danger"><p>{{ error }}</p></div>
+    {% endif %}
+    <form method="post" action="/login">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="field">
+        <label for="number">Número de cuenta</label>
+        <input type="text" id="number" name="number" value="{{ number }}"
+               inputmode="numeric" autocomplete="username" pattern="[0-9]{12}"
+               maxlength="12" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" name="password"
+               autocomplete="current-password" maxlength="1024" required>
+      </div>
+      <div class="actions"><button class="primary" type="submit">Entrar</button></div>
+    </form>
+    <p class="hint">
+      El número de cuenta es el identificador; no hay correo en el circuito,
+      así que la recuperación es mediada por el operador.
+    </p>
+    <p class="hint"><a href="/signup">¿Nuevo por aquí? Crear una cuenta</a></p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Configuración</h1>
+<p class="lede">Servicio {{ service_label }} · {{ tenant_name }} · unidad <span class="mono">{{ unit }}</span></p>
+{% include "partials/service_tabs.html" %}
+
+{% if has_notice %}
+<div class="notice {{ notice_class }}"><p>{{ notice }}</p></div>
+{% endif %}
+
+<div class="grid cols-2">
+  <section class="card accented">
+    <h3>Configuración aplicada por el broker</h3>
+    <dl class="meta">
+      <dt>Tipo</dt><dd class="mono">{{ kind }}</dd>
+      <dt>Imagen</dt><dd><code>{{ image }}</code></dd>
+      <dt>Objetivo de ciclo de vida</dt><dd><span class="badge {{ state_class }}">{{ state_label }}</span></dd>
+      {% if is_storage %}
+      <dt>Usuario del gestor de archivos</dt><dd class="mono">{{ username }}</dd>
+      <dt>Modo de archivos</dt><dd>{% if read_only %}Solo lectura{% else %}Lectura y escritura{% endif %}</dd>
+      <dt>Servicio detenido</dt><dd>{% if stopped %}Sí, puedes guardar ajustes{% else %}No{% endif %}</dd>
+      {% endif %}
+    </dl>
+    <p class="hint">Lectura de la unidad comprometida en el host. Nunca incluye contraseñas, hashes ni secretos; la imagen y los recursos solo cambian por política del operador.</p>
+    {% if is_storage %}
+    <p class="hint">El usuario y la contraseña iniciales se fijan al crear el servicio; los usuarios y los archivos se administran dentro de File Browser.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    {% if is_storage %}
+    <h3>Modo de acceso a los archivos</h3>
+    <ol class="steps">
+      <li>Detén el servicio desde la pestaña Resumen.</li>
+      <li>Guarda el modo de acceso aquí, con el servicio detenido.</li>
+      <li>Inicia el servicio de nuevo para usarlo.</li>
+    </ol>
+    {% if can_configure %}
+    <form method="post" action="/portal/services/{{ service_id }}/configuration">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="field check-field">
+        <label for="read_only">
+          <input id="read_only" name="read_only" type="checkbox"{% if read_only %} checked{% endif %}>
+          Archivos en modo solo lectura
+        </label>
+      </div>
+      <button class="primary" type="submit">Guardar configuración</button>
+    </form>
+    {% else %}
+    <p class="notice">El servicio debe estar detenido y sin trabajos pendientes para cambiar este ajuste. El broker vuelve a comprobarlo al guardar; no se borra ni se reinicia ningún dato.</p>
+    {% endif %}
+    {% else %}
+    <h3>Sin ajustes editables</h3>
+    <p>Este tipo de servicio no tiene opciones configurables desde el panel. Su imagen y sus recursos los fija la política del operador.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

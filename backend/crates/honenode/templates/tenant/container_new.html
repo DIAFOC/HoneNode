@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Nuevo servicio</h1>
+<p class="lede">Ejecutar cualquier imagen compatible de un registro autorizado.</p>
+{% if !error.is_empty() %}
+<p class="notice" role="alert">{{ error }}</p>
+{% endif %}
+<form method="post" action="/portal/containers/new" autocomplete="off" class="container-form">
+  <input type="hidden" name="csrf" value="{{ principal.csrf }}">
+  <div class="grid cols-2">
+    <div class="field">
+      <label for="name">Nombre único</label>
+      <input id="name" name="name" value="{{ form.name }}" required maxlength="59" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="mi-app" aria-describedby="name-hint">
+      <p class="hint" id="name-hint">Unidad {{ slug }}-&lt;nombre&gt;. Usa minúsculas, números y guiones; no nombres reservados como forgejo o git.</p>
+    </div>
+    <div class="field">
+      <label for="plan">Plan autorizado</label>
+      <select id="plan" name="plan_code" required aria-describedby="plan-hint">
+        <option value=""{% if form.plan_code.is_empty() %} selected{% endif %} disabled>Selecciona un plan</option>
+        {% if !form.plan_code.is_empty() %}
+        {% if !plan_available %}
+        <option value="{{ form.plan_code }}" selected>Plan no disponible: {{ form.plan_code }}</option>
+        {% endif %}
+        {% endif %}
+        {% for entry in entries %}
+        <option value="{{ entry.plan_code }}"{% if entry.plan_code == form.plan_code %} selected{% endif %}>{{ entry.label }}</option>
+        {% endfor %}
+      </select>
+      <p class="hint" id="plan-hint">Solo planes que permiten contenedores genéricos. El plan, registro, límites y cuota se vuelven a validar al enviar.</p>
+    </div>
+  </div>
+  <div class="grid cols-2">
+    {% for entry in entries %}
+    <section class="card">
+      <h2>{{ entry.label }}</h2>
+      <p>CPU {{ entry.cpu_quota_percent }}% · RAM {{ entry.memory_high }} / {{ entry.memory_max }} · tareas {{ entry.tasks_max }} · {{ entry.max_services }} servicios · {{ entry.service_days }} días</p>
+      <p>Registros permitidos:</p>
+      {% if entry.registries.is_empty() %}
+      <p class="hint">Ninguno: este plan no autoriza descargar imágenes.</p>
+      {% endif %}
+      {% for registry in entry.registries %}
+      <code>{{ registry }}</code>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+  <p class="hint">Límites de solo lectura del catálogo raíz en vivo. Confiar en un registro no garantiza que la imagen sea segura o exista.</p>
+  <div class="field">
+    <label for="image">Imagen completa con registro y etiqueta o @sha256:digest</label>
+    <input id="image" name="image" value="{{ form.image }}" required maxlength="512" placeholder="registry.example/equipo/app:version" aria-describedby="image-hint">
+    <p class="hint" id="image-hint">El agente usa Podman rootless con <code>Pull=missing</code>: si la imagen ya está en el almacén del inquilino no se descarga. Las referencias <code>localhost/...</code> deben precargarse en ese almacén; no hay un registro local. El entrypoint de la imagen se conserva.</p>
+  </div>
+  <div class="grid cols-2">
+    <div class="field">
+      <label for="port">Puerto HTTP interno</label>
+      <input id="port" type="number" name="container_port" min="1" max="65535" value="{{ form.container_port }}" required aria-describedby="port-hint">
+      <p class="hint" id="port-hint">Puerto que escucha la aplicación, no el puerto del host. El agente asigna el puerto de loopback al crear.</p>
+    </div>
+    <div class="field">
+      <label for="user">UID no root dentro del contenedor</label>
+      <input id="user" type="number" name="user" min="1" max="65535" value="{{ form.user }}" required>
+    </div>
+  </div>
+  <div class="field">
+    <label for="environment">Variables de entorno: KEY=VALUE, una por línea</label>
+    <textarea id="environment" name="environment" rows="8" maxlength="16384" spellcheck="false" placeholder="APP_MODE=production&#10;APP_SECRET=GENERATE&#10;NONCE=GENERATE" aria-describedby="environment-hint secret-status"></textarea>
+    <p class="hint" id="environment-hint">Valores literales, sin expansión de shell ni comandos. No pegues export. Máximo 32 variables únicas; sin saltos de línea dentro de valores. Se borran en errores y nunca se guardan en la base de datos del panel. Para generar un secreto, escribe APP_SECRET=GENERATE, PASSWORD=GENERATE o NONCE=GENERATE (también claves con sufijo _SECRET, _PASSWORD o _NONCE). El botón solo sustituye esos marcadores por 32 caracteres hexadecimales; no cambia valores existentes. La generación es local; las variables solo se envían al pulsar Ejecutar imagen.</p>
+    <div class="actions">
+      <button type="button" id="generate-secrets" hidden>Generar secretos marcados</button>
+      <span id="secret-status" role="status" aria-live="polite"></span>
+    </div>
+  </div>
+  <div class="field">
+    <label for="volumes">Volúmenes gestionados: nombre=/destino, uno por línea</label>
+    <textarea id="volumes" name="volumes" rows="4" maxlength="4096" placeholder="data=/var/lib/app" aria-describedby="volumes-hint">{{ form.volumes }}</textarea>
+    <p class="hint" id="volumes-hint">Máximo 8 volúmenes. El agente elige las rutas del host. Sin sockets, rutas de control, solapamientos ni ..</p>
+  </div>
+  <div class="field check-field">
+    <label for="readonly"><input id="readonly" type="checkbox" name="read_only" value="true"{% if form.read_only %} checked{% endif %}> Sistema raíz de solo lectura</label>
+  </div>
+  <p class="hint">La configuración genérica no permite editar variables de entorno después de crear. Para una URL HTTP local, puedes usar <code>${HONE_HTTP_ORIGIN}</code> (incluye el protocolo y el puerto asignado, sin barra final) o <code>${HONE_HOST_PORT}</code>. Ejemplo: <code>FORGEJO__server__ROOT_URL=${HONE_HTTP_ORIGIN}/</code>. El agente sustituye esos marcadores al crear; no ejecuta variables de shell.</p>
+  <button type="submit" class="primary">Ejecutar imagen</button>
+</form>
+<p>Sin comandos personalizados, montajes del host ni privilegios. HTTP se asigna en loopback; publicación pública requiere al operador.</p>
+<a href="/portal/images">Plantillas opcionales</a>
+{% endblock %}

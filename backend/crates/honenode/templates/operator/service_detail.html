@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ service_label }}</h1>
+<p class="lede">
+  Servicio <span class="mono">{{ unit }}</span> del inquilino
+  <span class="mono">{{ tenant_slug }}</span>
+</p>
+
+<div class="grid cols-2">
+  <section class="card accented">
+    <h3>Estado</h3>
+    <dl class="meta">
+      <dt>Objetivo de ciclo de vida</dt><dd><span class="badge {{ state_class }}">{{ state_label }}</span></dd>
+      <dt>Ciclo de vida</dt><dd><span class="badge {{ lifecycle_class }}">{{ lifecycle_label }}</span></dd>
+      <dt>Última observación del broker (no prueba de salud)</dt><dd class="mono">{{ observed }}</dd>
+      <dt>Plan</dt><dd>{{ plan_code }}</dd>
+      <dt>Vence</dt><dd>{{ expires_text }} · {{ days_text }}</dd>
+      <dt>Puertos</dt><dd class="mono">{{ ports }}</dd>
+    </dl>
+  </section>
+  {% if plan.has_plan %}
+  <section class="card">
+    <h3>Envelope declarado (registro)</h3>
+    <dl class="meta">
+      <dt>CPUWeight</dt><dd class="mono">{{ plan.cpu_weight }}</dd>
+      <dt>MemoryHigh</dt><dd class="mono">{{ plan.memory_high }}</dd>
+      <dt>MemoryMax</dt><dd class="mono">{{ plan.memory_max }}</dd>
+      <dt>TasksMax</dt><dd class="mono">{{ plan.tasks_max }}</dd>
+      <dt>Disco previsto</dt><dd>{{ plan.disk_gb }} GB · cuota aún no aplicada</dd>
+      <dt>Precio</dt><dd>{{ plan.monthly_price }} MXN/mes</dd>
+    </dl>
+    <p class="hint">Metadatos de presentación y facturación. El broker aplica su política autorizada; estos valores no prueban los límites efectivos.</p>
+  </section>
+  {% endif %}
+</div>
+
+<h2>Ciclo de vida</h2>
+<div class="actions">
+  <form method="post" action="/operator/services/{{ service_id }}/start">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Iniciar</button>
+  </form>
+  <form method="post" action="/operator/services/{{ service_id }}/stop">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Detener</button>
+  </form>
+  <form method="post" action="/operator/services/{{ service_id }}/restart">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Reiniciar</button>
+  </form>
+  <form method="post" action="/operator/services/{{ service_id }}/suspend">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Suspender</button>
+  </form>
+  <form method="post" action="/operator/services/{{ service_id }}/resume">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Reanudar</button>
+  </form>
+  <form method="post" action="/operator/services/{{ service_id }}/delete">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Eliminar</button>
+  </form>
+</div>
+
+<h2>Tiempo contratado</h2>
+<section class="card">
+  <form method="post" action="/operator/services/{{ service_id }}/time">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="field">
+      <label for="days">Días a añadir</label>
+      <input type="number" id="days" name="days" value="30" min="1" max="3650">
+    </div>
+    <div class="actions"><button class="primary" type="submit">Añadir tiempo</button></div>
+  </form>
+  {% if plan.has_plan %}
+  <p class="hint">
+    30 días sobre el plan {{ plan.code }} son {{ plan.monthly_price }} MXN.
+    El tiempo es aditivo: pagar extiende el vencimiento actual. Sin prorrateo.
+  </p>
+  {% endif %}
+</section>
+
+<h2>Actividad</h2>
+{% include "partials/audit_table.html" %}
+{% endblock %}

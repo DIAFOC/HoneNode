@@ -1,0 +1,51 @@
+# HoneNode custom Semgrep rules.
+#
+# These complement the Semgrep registry packs (p/security-audit, p/secrets) and
+# map directly to the STRIDE model in HoneNode_Threat_Model_STRIDE.json.
+# Findings at ERROR severity fail the security job.
+rules:
+  - id: honenode-rust-command-interpolated
+    languages: [rust]
+    severity: ERROR
+    message: >-
+      Command::new receives an interpolated program. Host commands must go
+      through the broker's fixed allowlist and literal programs (STRIDE:
+      command injection / privilege boundary).
+    metadata:
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: std::process::Command::new(format!(...))
+          - pattern: std::process::Command::new(&format!(...))
+          - pattern: std::process::Command::new($X.to_string())
+          - pattern: std::process::Command::new($X.into())
+
+  - id: honenode-rust-sql-format
+    languages: [rust]
+    severity: ERROR
+    message: >-
+      SQL built with format!/concatenation. Use sqlx bind parameters (STRIDE:
+      SQL injection).
+    metadata:
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: sqlx::query(format!(...))
+          - pattern: sqlx::query(&format!(...))
+          - pattern: sqlx::query($X + $Y)
+
+  - id: honenode-rust-weak-password-hash
+    languages: [rust]
+    severity: ERROR
+    message: >-
+      MD5/SHA-1 are not password hashes. Use Argon2id or bcrypt (STRIDE:
+      credential protection).
+    metadata:
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: md5::compute(...)
+          - pattern: sha1::Sha1::new()

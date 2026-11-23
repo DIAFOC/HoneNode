@@ -1,0 +1,19 @@
+<section id="registries" class="registry-section" aria-labelledby="registries-title">
+  <h2 id="registries-title">Registros y documentación</h2>
+  {% if !principal.is_operator %}
+  <p class="lede">Para desplegar, usa el <a href="/portal/images">catálogo de imágenes aprobadas</a>: es la única fuente válida y cada referencia se valida de nuevo contra la política al crear el servicio.</p>
+  {% endif %}
+  <p class="lede">Consulta las guías de los proveedores. Estos enlaces externos son secundarios: no importan imágenes, no buscan en registros arbitrarios ni modifican el catálogo autorizado por el operador.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Proveedor</th><th>Listado de imágenes</th><th>Documentación</th></tr></thead>
+      <tbody>
+        <tr><td>nginx</td><td><a href="https://hub.docker.com/_/nginx" rel="noreferrer">Docker Hub · nginx</a></td><td><a href="https://nginx.org/en/docs/" rel="noreferrer">Guía de nginx</a></td></tr>
+        <tr><td>PostgreSQL</td><td><a href="https://hub.docker.com/_/postgres" rel="noreferrer">Docker Hub · postgres</a></td><td><a href="https://www.postgresql.org/docs/current/" rel="noreferrer">Guía de PostgreSQL</a></td></tr>
+        <tr><td>Quay</td><td><a href="https://quay.io/search/" rel="noreferrer">Explorar Quay.io</a></td><td><a href="https://docs.quay.io/" rel="noreferrer">Guía de Quay</a></td></tr>
+        <tr><td>File Browser</td><td><a href="https://github.com/filebrowser/filebrowser" rel="noreferrer">Repositorio archivado · filebrowser</a></td><td><a href="https://filebrowser.org/" rel="noreferrer">Documentación de File Browser</a></td></tr>
+        <tr><td>Forgejo</td><td><a href="https://codeberg.org/forgejo/-/packages/container/forgejo" rel="noreferrer">Imágenes de Forgejo</a></td><td><a href="https://forgejo.org/docs/latest/admin/installation/docker/" rel="noreferrer">Guía de contenedores de Forgejo</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>

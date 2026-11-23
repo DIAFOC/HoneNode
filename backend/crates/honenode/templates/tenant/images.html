@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">{{ tenant_name }} / Imágenes</p>
+<div class="page-heading">
+  <div>
+    <h1>Imágenes y plantillas opcionales</h1>
+    <a class="button primary" href="/portal/containers/new">Ejecutar imagen de registro</a>
+    <p>Registros permitidos (política en vivo): {% for registry in registries %}<code>{{ registry }}</code> {% endfor %}</p>
+    <p class="lede">Imágenes aprobadas por la política del operador para tu cuenta. Las plantillas usan referencias fijas; Nuevo servicio permite elegir imágenes de los registros autorizados, sin montajes privilegiados.</p>
+  </div>
+  <a class="button" href="/portal/catalog">Ver planes</a>
+</div>
+<div class="notice"><p>Desplegar crea un servicio gestionado por el agente del host, sin shell web ni acceso al socket del motor de contenedores. Los enlaces de registro son documentación externa del proveedor: no buscan, descargan ni importan imágenes.</p></div>
+{% if has_rows %}
+<div class="catalog-grid">
+  {% for row in rows %}
+  <section class="catalog-panel" aria-label="{{ row.kind_label }} · {{ row.plan_code }}">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow mono">{{ row.plan_code }}</p>
+        <h2><span class="kind {{ row.tone }}"><span class="dot" aria-hidden="true"></span>{{ row.kind_label }}</span></h2>
+      </div>
+      {% if row.can_deploy %}<span class="badge ok">Disponible</span>{% else %}<span class="badge muted">No disponible</span>{% endif %}
+    </header>
+    <dl class="resource-list">
+      <div><dt>Referencia aprobada</dt><dd><code>{{ row.reference }}</code></dd></div>
+      {% if !row.repository.is_empty() %}
+      <div><dt>Repositorio</dt><dd class="mono">{{ row.repository }}</dd></div>
+      <div><dt>Etiqueta</dt><dd class="mono">{{ row.tag }}</dd></div>
+      <div><dt>Digest</dt><dd class="mono">{{ row.digest }}</dd></div>
+      {% else %}
+      <div><dt>Revisión</dt><dd>Referencia no válida; avisa al operador antes de desplegar.</dd></div>
+      {% endif %}
+      <div><dt>Tipo de servicio</dt><dd class="mono">{{ row.kind }}</dd></div>
+    </dl>
+    {% if row.archived %}
+    <p class="hint panel-note">File Browser está archivado por su proyecto upstream. Se ofrece porque la política lo autoriza, pero requiere una decisión de seguridad del operador antes de producción.</p>
+    {% endif %}
+
+    <div class="panel-actions">
+      {% if row.can_deploy %}
+      <a class="button primary" href="{{ row.deploy_url }}">Desplegar</a>
+      {% else %}
+      <span class="hint">No disponible: tipo ya reservado, límite de servicios alcanzado o referencia no válida.</span>
+      {% endif %}
+      {% if row.has_registry_url %}
+      <a href="{{ row.registry_url }}" target="_blank" rel="noopener noreferrer">Repositorio upstream</a>
+      {% endif %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<section class="empty-state">
+  {% if catalog_unavailable %}
+  <h2>Catálogo no disponible</h2>
+  <p>No pudimos consultar la política del agente del host. No se desplegará ninguna imagen alternativa. Contacta con el operador o vuelve a intentar más tarde.</p>
+  {% else %}
+  <h2>No hay imágenes aprobadas</h2>
+  <p>La política autorizada no declara imágenes para tu cuenta. Contacta con el operador.</p>
+  {% endif %}
+  <a href="/portal">Volver a mis servicios</a>
+</section>
+{% endif %}
+{% include "partials/registries.html" %}
+{% endblock %}

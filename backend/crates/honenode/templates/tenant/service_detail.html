@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ service_label }}</h1>
+<p class="lede">Servicio {{ service_label }} · {{ tenant_name }} · unidad <span class="mono">{{ unit }}</span> · plan {{ plan_code }}</p>
+{% include "partials/service_tabs.html" %}
+
+<div class="grid cols-2">
+  <section class="card accented">
+    <h3>Estado</h3>
+    <dl class="meta">
+      <dt>Objetivo de ciclo de vida</dt><dd><span class="badge {{ state_class }}">{{ state_label }}</span></dd>
+      <dt>Ciclo de vida</dt><dd><span class="badge {{ lifecycle_class }}">{{ lifecycle_label }}</span></dd>
+      <dt>Última observación del broker (no prueba de salud)</dt><dd class="mono">{{ observed }}</dd>
+      <dt>Vence</dt><dd>{{ expires_text }} · {{ days_text }}</dd>
+      <dt>Creado</dt><dd>{{ created }}</dd>
+    </dl>
+    {% if plan.has_plan %}
+    <h3>Envelope declarado (registro)</h3>
+    <dl class="meta">
+      <dt>CPUWeight</dt><dd class="mono">{{ plan.cpu_weight }}</dd>
+      <dt>MemoryHigh</dt><dd class="mono">{{ plan.memory_high }}</dd>
+      <dt>MemoryMax</dt><dd class="mono">{{ plan.memory_max }}</dd>
+      <dt>TasksMax</dt><dd class="mono">{{ plan.tasks_max }}</dd>
+      <dt>Disco previsto</dt><dd>{{ plan.disk_gb }} GB · cuota aún no aplicada</dd>
+    </dl>
+    <p class="hint">Metadatos del registro. Los límites efectivos dependen de la política autorizada del broker.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Acceso</h3>
+    {% if has_public_url %}
+      <dl class="meta">
+        <dt>URL</dt>
+        <dd><a href="{{ public_url }}" target="_blank" rel="noopener">{{ public_url }}</a></dd>
+      </dl>
+      {% if is_storage %}
+      <p class="hint">Abre la aplicación para gestionar archivos y usuarios en File Browser. El panel no la embebe ni la proxifica, y no ofrece shell ni ejecución de comandos.</p>
+      <p class="hint">El modo solo lectura se cambia en la pestaña <a href="/portal/services/{{ service_id }}/configuration">Configuración</a>, con el servicio detenido.</p>
+      {% endif %}
+      {% if is_web %}
+      <p class="hint">La página se edita en la pestaña <a href="/portal/services/{{ service_id }}/site">Contenido</a>. Escribe <code>index.html</code> y guarda; nginx la sirve desde una carpeta de solo lectura.</p>
+      {% endif %}
+    {% else %}
+      <p>
+        Este servicio no tiene superficie web pública. Solicita acceso al operador;
+        la consola mediada por el broker aún no está disponible.
+      </p>
+    {% endif %}
+    <h3>Controles</h3>
+    <ul>
+      {% for control in controls %}<li>{{ control }}</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+
+{% if !container_info.is_empty() %}<h2>Contenedor · inspección segura</h2><pre class="log-view">{{ container_info }}</pre><p>Solo claves de entorno; nunca valores. El estado observado no prueba salud HTTP. La publicación pública no está configurada por este flujo.</p>{% endif %}
+<a href="/portal/services/{{ service_id }}">Actualizar estado</a>
+<h2>Acciones</h2>
+{% if can_manage %}
+<div class="actions">
+  <form method="post" action="/portal/services/{{ service_id }}/restart">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Reiniciar</button>
+  </form>
+  {% if is_running %}
+  <form method="post" action="/portal/services/{{ service_id }}/stop">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Detener</button>
+  </form>
+  {% else %}
+  <form method="post" action="/portal/services/{{ service_id }}/start">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Iniciar</button>
+  </form>
+  {% endif %}
+</div>
+{% else %}
+<p class="notice">Acciones bloqueadas: el servicio está suspendido, eliminado o vencido. Canjea una clave de recarga o revisa el estado del servicio.</p>
+{% endif %}
+<div class="actions">
+  <form method="post" action="/portal/services/{{ service_id }}/delete">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Eliminar servicio</button>
+  </form>
+</div>
+<p class="hint">Eliminar detiene y retira la unidad del servicio y libera su tipo, puerto y volúmenes para volver a desplegar. Los datos del volumen no se borran automáticamente.</p>
+
+<h2>Actividad</h2>
+{% include "partials/audit_table.html" %}
+{% endblock %}

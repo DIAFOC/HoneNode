@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the leading v
+        required: true
+        default: 0.8.8
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  version:
+    name: Normalize version
+    runs-on: ubuntu-latest
+    outputs:
+      value: ${{ steps.version.outputs.value }}
+    steps:
+      - id: version
+        run: |
+          raw="${{ inputs.version || github.ref_name }}"
+          echo "value=${raw#v}" >> "$GITHUB_OUTPUT"
+
+  fedora-bundle:
+    name: Fedora bundle
+    needs: version
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+      options: --user root
+    env:
+      BUNDLE_VERSION: ${{ needs.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Fedora-tagged bundle
+        run: |
+          dnf -y install cargo rust gcc make
+          bash packaging/os/fedora/build.sh --skip-tests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedora-bundle
+          path: packaging/os/dist/*.tar.gz
+          if-no-files-found: error
+
+  rocky-bundle:
+    name: Rocky bundle
+    needs: version
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/rockylinux/rockylinux:10
+      options: --user root
+    env:
+      BUNDLE_VERSION: ${{ needs.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Rocky-tagged bundle
+        run: |
+          dnf -y install gcc make
+          bash packaging/os/rocky/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rocky-bundle
+          path: packaging/os/dist/*.tar.gz
+          if-no-files-found: error
+
+  app-image:
+    name: App container image
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Containerfile
+          tags: honenode-app:${{ env.VERSION }}
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Save image
+        run: docker save "honenode-app:${VERSION}" -o "honenode-app-${VERSION}.tar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-image
+          path: honenode-app-*.tar
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: [version, fedora-bundle, rocky-bundle, app-image]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.value }}
+          name: HoneNode ${{ needs.version.outputs.value }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/*
+          body: |
+            HoneNode ${{ needs.version.outputs.value }} — single-host multi-tenant hosting plane.
+
+            Assets:
+            - `honenode-${{ needs.version.outputs.value }}-fedora-x86_64.tar.gz` — Fedora-tagged bundle
+            - `honenode-${{ needs.version.outputs.value }}-rocky-x86_64.tar.gz` — Rocky-tagged bundle
+            - `honenode-app-${{ needs.version.outputs.value }}.tar` — app container image (`docker load`)
+
+            The bundles are OS-specific by design; do not install the Fedora bundle on Rocky or the Rocky bundle on Fedora.

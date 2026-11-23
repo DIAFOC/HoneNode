@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Registros</h1>
+<p class="lede">Servicio {{ service_label }} · {{ tenant_name }} · unidad <span class="mono">{{ unit }}</span></p>
+{% include "partials/service_tabs.html" %}
+
+<section class="card">
+  <h3>Diario del servicio</h3>
+  <p class="hint">Últimas {{ lines }} líneas del diario de la unidad, obtenidas a través del broker. No puedes elegir otra unidad, otra cantidad de líneas ni rutas del host.</p>
+  <pre class="log-view">{{ logs }}</pre>
+</section>
+{% endblock %}

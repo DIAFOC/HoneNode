@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Claves generadas</h1>
+<p class="lede">
+  {{ codes.len() }} clave(s) de <span class="mono">{{ plan_code }}</span> por {{ days }} días.
+  Se muestran <strong>una sola vez</strong>: cópialas ahora y entrégalas por un canal privado.
+</p>
+<div class="notice">
+  <p>El registro solo conserva el hash de cada código. Si pierdes esta página, la clave no se puede recuperar: genera otra.</p>
+</div>
+<section class="card">
+  <ul class="image-list">
+    {% for code in codes %}
+    <li class="mono">{{ code }}</li>
+    {% endfor %}
+  </ul>
+</section>
+<div class="actions">
+  <a class="button primary" href="/operator/keys">Volver a claves</a>
+</div>
+{% endblock %}

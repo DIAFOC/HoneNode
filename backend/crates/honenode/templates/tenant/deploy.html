@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">{{ tenant_name }} / Desplegar · {{ plan_code }}</p>
+<div class="page-heading">
+  <div>
+    <h1>Desplegar {{ kind_label }}</h1>
+    <p class="lede">Asistente de aprovisionamiento sobre la imagen aprobada por el operador. La referencia se vuelve a validar contra el catálogo autorizado al enviar el formulario.</p>
+  </div>
+  <a class="button" href="/portal/images">Catálogo de imágenes</a>
+</div>
+
+{% if has_error %}
+<div class="notice danger"><p>{{ error }}</p></div>
+{% endif %}
+{% if archived %}
+<div class="notice danger"><p>File Browser está archivado por su proyecto upstream: no recibe mantenimiento ordinario. Despliégalo solo si el operador ha aceptado ese riesgo.</p></div>
+{% endif %}
+
+<div class="grid cols-2">
+  <section class="card accented">
+    <h3>Imagen aprobada</h3>
+    <dl class="meta">
+      <dt>Referencia</dt><dd><code>{{ image }}</code></dd>
+      <dt>Repositorio</dt><dd class="mono">{{ repository }}</dd>
+      <dt>Etiqueta</dt><dd class="mono">{{ tag }}</dd>
+      <dt>Digest</dt><dd class="mono">{{ digest }}</dd>
+      {% if has_registry_url %}
+      <dt>Documentación</dt><dd><a href="{{ registry_url }}" target="_blank" rel="noopener noreferrer">Repositorio upstream</a></dd>
+      {% endif %}
+    </dl>
+    <p class="hint">La imagen es fija y se valida de nuevo al crear el servicio. No puedes importar otra imagen, usar un registro arbitrario ni añadir montajes privilegiados.</p>
+    <h3>Recursos asignados por el broker</h3>
+    <dl class="meta">
+      <dt>Unidad</dt><dd class="mono">{{ unit }}</dd>
+      <dt>Memoria · umbral</dt><dd class="mono">{{ memory_high }}</dd>
+      <dt>Memoria · máximo</dt><dd class="mono">{{ memory_max }}</dd>
+      <dt>Cuota CPU</dt><dd class="mono">{{ cpu_quota_percent }}%</dd>
+      <dt>Tareas · máximo</dt><dd class="mono">{{ tasks_max }}</dd>
+      <dt>Duración incluida</dt><dd>{{ service_days }} días</dd>
+    </dl>
+    <h3>Puertos y rutas gestionados</h3>
+    <dl class="meta">
+      {% for port in ports %}<dt>Puerto · {{ port.key }}</dt><dd class="mono">{{ port.value }}</dd>{% endfor %}
+      {% for volume in volumes %}<dt>Volumen · {{ volume.key }}</dt><dd class="mono">{{ volume.value }}</dd>{% endfor %}
+    </dl>
+    <p class="hint">Valores de solo lectura calculados por el plano de gestión. El broker los aplica; no son editables desde el panel.</p>
+  </section>
+
+  <section class="card">
+    <h3>Configuración inicial</h3>
+    <form method="post" action="/portal/services" class="deploy-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="plan_code" value="{{ plan_code }}">
+      <input type="hidden" name="kind" value="{{ kind }}">
+      <input type="hidden" name="image" value="{{ image }}">
+      {% if is_storage %}
+      <div class="field">
+        <label for="file_manager_username">Usuario del gestor de archivos</label>
+        <input id="file_manager_username" name="file_manager_username" type="text" value="{{ username }}" required minlength="1" maxlength="32" pattern="[A-Za-z0-9_.\-]+" autocomplete="off" spellcheck="false">
+        <p class="hint">1-32 caracteres: letras ASCII, dígitos, guion bajo, punto o guion. No podrás cambiarlo después.</p>
+      </div>
+      <div class="field">
+        <label for="file_manager_password">Contraseña inicial</label>
+        <input id="file_manager_password" name="file_manager_password" type="password" required minlength="12" maxlength="72" autocomplete="new-password">
+        <p class="hint">Entre 12 y 72 bytes, sin caracteres de control. Se envía una sola vez al agente del host: no se guarda en el panel ni aparece en trabajos, auditoría o registros. No hay contraseña por defecto.</p>
+      </div>
+      <div class="field check-field">
+        <label for="file_manager_read_only">
+          <input id="file_manager_read_only" name="file_manager_read_only" type="checkbox"{% if read_only %} checked{% endif %}>
+          Archivos en modo solo lectura
+        </label>
+        <p class="hint">Podrás cambiarlo más tarde desde la pestaña Configuración, con el servicio detenido.</p>
+      </div>
+      <p class="hint">El servicio se administra desde su propia aplicación: archivos y usuarios se gestionan en File Browser. El panel no ofrece shell, no ejecuta comandos y no embebe la aplicación.</p>
+      {% else %}
+      <p>Esta imagen no necesita credenciales iniciales desde el panel. El servicio se crea con los valores de la política autorizada.</p>
+      {% endif %}
+      {% if can_provision %}
+      <button class="primary" type="submit">Crear servicio · {{ service_days }} días</button>
+      {% else %}
+      <p class="notice">No puedes desplegar este tipo: ya está reservado o alcanzaste el límite de servicios del plan.</p>
+      <button class="primary" type="submit" disabled>Crear servicio</button>
+      {% endif %}
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">{{ tenant_name }} / Registro de confianza</p>
+<div class="page-heading">
+  <div>
+    <h1>Registro de imágenes de confianza</h1>
+    <p class="lede">
+      Referencias verificadas con su editor upstream, para tu tranquilidad. Este índice es
+      documentación: cada despliegue sigue validándose contra la política en vivo del operador.
+    </p>
+  </div>
+  <a class="button" href="/portal/images">Catálogo de imágenes</a>
+</div>
+<div class="notice">
+  <p>Los enlaces llevan a la página del registro upstream: no buscan, descargan ni importan imágenes. Los servicios marcados como <span class="badge ok">demo</span> son los cuatro servicios de la presentación.</p>
+</div>
+<div class="catalog-grid">
+  {% for row in rows %}
+  <section class="catalog-panel" aria-label="{{ row.name }}">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow mono">{{ row.kind }}</p>
+        <h2>{{ row.name }}</h2>
+      </div>
+      {% if row.demo %}<span class="badge ok">demo</span>{% endif %}
+    </header>
+    <dl class="resource-list">
+      <div><dt>Uso</dt><dd>{{ row.purpose }}</dd></div>
+      <div><dt>Referencia</dt><dd class="mono">{{ row.reference }}</dd></div>
+      <div><dt>Nota</dt><dd>{{ row.note }}</dd></div>
+    </dl>
+    <div class="panel-actions">
+      <a href="{{ row.registry_url }}" target="_blank" rel="noopener noreferrer">Registro upstream</a>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+HoneNode experimental host-agent RPM
+===================================
+
+This package contains only the prebuilt honed host broker and its systemd
+integration. It does not contain, install, configure, or start the honenode
+application. It is not a HoneNode product release.
+
+Installation creates the honenode group and the /etc/honenode, /run/honenode,
+and /var/lib/honenode directories. It does not enable, start, or restart any
+service. Uninstall does not stop the service, remove the group, delete policy,
+or delete retained state.
+
+The service defaults to an empty HONE_TENANTS allowlist. No tenant is
+provisioned. /etc/honenode/policy.json is deliberately absent: provisioning
+and activation fail closed until a root operator installs and reviews a
+version-1 policy. Optional overrides belong in /etc/honenode/honed.env.
+
+Do not start integration testing until host dependencies, tenant policy,
+capacity limits, listener/edge design, operator bootstrap, and an SELinux
+policy have been reviewed. Keep SELinux enforcing. See the packaging README
+in the source tree for the build gate and current blockers.

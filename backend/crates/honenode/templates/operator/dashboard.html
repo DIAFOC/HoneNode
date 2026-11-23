@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block sidebar_summary %}
+<section class="host-summary" aria-labelledby="host-summary-title">
+  <h2 id="host-summary-title">Host · última muestra</h2>
+  <dl>
+    {% for stat in host_stats %}
+    <div><dt>{{ stat.label }}</dt><dd>{{ stat.value }} <span>{{ stat.unit }}</span></dd></div>
+    {% endfor %}
+  </dl>
+</section>
+{% endblock %}
+{% block content %}
+<h1>Panel de operador</h1>
+<p class="lede">
+  Vista global del despliegue: inquilinos, servicios, consumo del host y rastro de auditoría.
+  Esta superficie debe permanecer interna: publícala solo en loopback o en la red de gestión,
+  con acceso por túnel SSH. La separación de red depende de la configuración del despliegue.
+</p>
+
+<div class="grid cols-4">
+  {% for stat in stats %}
+  <div class="card">
+    <h3>{{ stat.label }}</h3>
+    <div class="value">{{ stat.value }}</div>
+    <div class="unit">{{ stat.unit }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Host</h2>
+<div class="grid cols-4">
+  {% for stat in host_stats %}
+  <div class="card">
+    <h3>{{ stat.label }}</h3>
+    <div class="value">{{ stat.value }}</div>
+    <div class="unit">{{ stat.unit }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Trabajos recientes</h2>
+{% include "partials/jobs_table.html" %}
+
+<h2>Servicios</h2>
+{% include "partials/services_table.html" %}
+{% endblock %}

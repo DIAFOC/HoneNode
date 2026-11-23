@@ -1,0 +1,36 @@
+[Unit]
+Description=HoneNode experimental host agent (honed only; app not included)
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/honed
+Environment=HONE_BROKER_SOCKET=/run/honenode/broker.sock
+Environment=HONE_POLICY_FILE=/etc/honenode/policy.json
+Environment=HONE_TENANTS=
+Environment=HONE_SUBID_COUNT=65536
+Environment=HONE_QUADLET_USERS=/etc/containers/systemd/users
+Environment=HONE_TENANT_DATA=/srv/hosting
+Environment=HONE_ETC=/etc/hosting
+Environment=HONE_CADDY_DIR=/etc/hosting/caddy
+Environment=HONE_CADDY_ADMIN=127.0.0.1:2019
+Environment=HONE_TENANT_DOMAIN=sharpnode-hosting.lab
+EnvironmentFile=-/etc/honenode/honed.env
+Group=honenode
+RuntimeDirectory=honenode
+RuntimeDirectoryMode=0750
+StateDirectory=honenode
+StateDirectoryMode=0750
+ConfigurationDirectory=honenode
+ConfigurationDirectoryMode=0750
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+RestrictRealtime=true
+ReadWritePaths=/etc /home /run/honenode /var/lib/honenode -/srv/hosting
+
+[Install]
+WantedBy=multi-user.target

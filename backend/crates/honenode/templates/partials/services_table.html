@@ -1,0 +1,38 @@
+{% if has_services %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        {% if with_tenant %}<th>Inquilino</th>{% endif %}
+        <th>Tipo</th>
+        <th>Unidad</th>
+        <th>Plan</th>
+        <th>Objetivo</th>
+        <th>Última observación</th>
+        <th class="num">Días</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for service in services %}
+      <tr>
+        {% if with_tenant %}<td class="mono">{{ service.tenant_name }}</td>{% endif %}
+        <td>
+          <span class="kind {{ service.kind_tone }}">
+            <span class="dot" aria-hidden="true"></span>{{ service.kind_label }}
+          </span>
+        </td>
+        <td class="mono">{{ service.unit_name }}</td>
+        <td>{{ service.plan_code }}</td>
+        <td><span class="badge {{ service.state_class }}">{{ service.state_label }}</span></td>
+        <td class="mono">{{ service.observed }}</td>
+        <td class="num">{{ service.days }}</td>
+        <td><a href="/operator/services/{{ service.id }}">Detalle</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">Sin servicios.</p>
+{% endif %}

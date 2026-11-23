@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login">
+  <section class="card accented">
+    <h1>Crear cuenta</h1>
+    <p class="lede">Alta en el plan básico: prueba de 7 días con hasta dos servicios. Sin correo en el circuito.</p>
+    {% if has_error %}
+      <div class="notice danger"><p>{{ error }}</p></div>
+    {% endif %}
+    <form method="post" action="/signup">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="field">
+        <label for="name">Nombre del proyecto o comercio</label>
+        <input type="text" id="name" name="name" value="{{ name }}"
+               autocomplete="organization" maxlength="60" required autofocus>
+      </div>
+      <div class="actions"><button class="primary" type="submit">Crear mi cuenta</button></div>
+    </form>
+    <p class="hint">
+      Se generan un número de cuenta y una contraseña únicos: se muestran una sola vez
+      y deberás guardarlos en un entorno seguro. La recuperación es mediada por el operador.
+    </p>
+    <p class="hint"><a href="/login">Ya tengo credenciales: entrar</a></p>
+  </section>
+</div>
+{% endblock %}

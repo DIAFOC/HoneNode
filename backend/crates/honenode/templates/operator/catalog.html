@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Catálogo</h1>
+<p class="lede">
+  Los tipos de servicio que un inquilino puede contratar, con sus controles declarados
+  y el envelope declarado en el registro. El broker valida y aplica una política autorizada independiente;
+  estos metadatos no prueban los límites efectivos.
+</p>
+
+{% if has_entries %}
+<div class="grid cols-2">
+  {% for entry in entries %}
+  <section class="card accented {{ entry.tone }}">
+    <h3>{{ entry.label }}</h3>
+    <p>{{ entry.summary }}</p>
+    <dl class="meta">
+      <dt>Imagen</dt><dd class="mono">{{ entry.image }}</dd>
+      <dt>Salida</dt><dd>{{ entry.egress }}</dd>
+      <dt>Puertos públicos</dt><dd class="mono">{{ entry.public_ports }}</dd>
+    </dl>
+    <h3>Controles</h3>
+    <ul>
+      {% for control in entry.controls %}<li>{{ control }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">No hay servicios disponibles en el catálogo.</p>
+{% endif %}
+
+<h2>Planes</h2>
+{% if has_plans %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th class="num">Precio</th>
+        <th>Envelope declarado</th>
+        <th class="num">Disco previsto</th>
+        <th class="num">Máx.</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for plan in plans %}
+      <tr>
+        <td class="mono">{{ plan.code }}</td>
+        <td class="num">{{ plan.price }}</td>
+        <td class="mono">{{ plan.envelope }}</td>
+        <td class="num">{{ plan.disk_gb }} GB</td>
+        <td class="num">{{ plan.max_services }}</td>
+        <td>{{ plan.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">No hay planes disponibles.</p>
+{% endif %}
+{% include "partials/registries.html" %}
+{% endblock %}

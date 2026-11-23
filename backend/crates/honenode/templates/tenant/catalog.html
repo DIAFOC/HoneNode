@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">{{ tenant_name }} / Catálogo</p>
+<div class="page-heading">
+  <div><h1>Planes autorizados</h1><p class="lede">Elige un plan autorizado y un tipo de servicio. Los recursos y la duración vienen definidos por el catálogo.</p></div>
+  <a class="button primary" href="/portal/containers/new">Nuevo servicio: ejecutar imagen</a>
+</div>
+<div class="notice"><p>Solo se ofrecen tipos autorizados y no reservados. La disponibilidad se comprueba de nuevo al crear el servicio; no se ofrece acceso a shell. Contenedores genéricos se crean desde Nuevo servicio. El almacenamiento se despliega desde el <a href="/portal/images">catálogo de imágenes</a>, donde se configuran las credenciales iniciales del gestor de archivos.</p></div>
+{% if has_entries %}
+<div class="catalog-grid">
+  {% for entry in entries %}
+  <section class="catalog-panel" aria-label="Plan {{ entry.label }}">
+    {% include "partials/catalog_entry.html" %}
+    {% if entry.can_provision %}
+    <form class="provision-form" method="post" action="/portal/services">
+      {% include "partials/provision_fields.html" %}
+    </form>
+    {% else %}
+    <p class="empty">No disponible: se alcanzó el límite de servicios o no quedan tipos sin reservar para este plan.</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<section class="empty-state">
+  {% if catalog_unavailable %}
+  <h2>Catálogo no disponible</h2>
+  <p>No pudimos consultar la política del agente del host. No se crearán servicios ni se usarán planes locales como alternativa. Contacta con el operador o vuelve a intentar más tarde.</p>
+  {% else %}
+  <h2>No hay planes disponibles</h2><p>El catálogo autorizado está vacío. Contacta con el operador para consultar las opciones de tu cuenta.</p>
+  {% endif %}
+  <a href="/portal">Volver a mis servicios</a>
+</section>
+{% endif %}
+{% include "partials/registries.html" %}
+{% endblock %}

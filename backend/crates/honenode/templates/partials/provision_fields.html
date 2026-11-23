@@ -1,0 +1,14 @@
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="hidden" name="plan_code" value="{{ entry.plan_code }}">
+<div class="field">
+  <label for="kind-{{ entry.plan_code }}">Tipo de servicio</label>
+  <select id="kind-{{ entry.plan_code }}" name="kind" required>
+    <option value="" selected disabled>Selecciona un tipo</option>
+    {% for kind in entry.allowed_kinds %}
+    {% if kind != "container" %}
+    <option value="{{ kind }}"{% if entry.reserved_kinds.contains(kind) %} disabled{% endif %}>{{ kind }}{% if entry.reserved_kinds.contains(kind) %} · reservado{% endif %}</option>
+    {% endif %}
+    {% endfor %}
+  </select>
+</div>
+<button class="primary" type="submit">Crear servicio · {{ entry.service_days }} días</button>

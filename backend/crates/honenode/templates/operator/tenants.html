@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Inquilinos</h1>
+<p class="lede">
+  Cada inquilino es una cuenta Unix sin privilegios con su propia instancia de red.
+  El UID es la frontera de aislamiento.
+</p>
+
+<section class="card">
+  <h3>Alta de inquilino</h3>
+  <form method="post" action="/operator/tenants">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="field">
+      <label for="name">Nombre</label>
+      <input type="text" id="name" name="name" required maxlength="60"
+             placeholder="Comercio de velas">
+    </div>
+    <div class="actions"><button class="primary" type="submit">Crear inquilino</button></div>
+  </form>
+  <p class="hint">
+    El número de cuenta y la contraseña se generan aquí y se muestran una sola vez:
+    no hay correo en el circuito.
+  </p>
+</section>
+
+<h2>Provisionados</h2>
+{% if has_tenants %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Slug</th>
+        <th>Nombre</th>
+        <th>Estado</th>
+        <th>Creado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tenant in tenants %}
+      <tr>
+        <td class="mono">{{ tenant.slug }}</td>
+        <td>{{ tenant.name }}</td>
+        <td><span class="badge {{ tenant.status_class }}">{{ tenant.status_label }}</span></td>
+        <td>{{ tenant.created }}</td>
+        <td><a href="/operator/tenants/{{ tenant.id }}">Abrir</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">Todavía no hay inquilinos.</p>
+{% endif %}
+{% endblock %}

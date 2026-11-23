@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "allowed_registries": [],
+  "host_cpu_quota_percent": 300,
+  "max_services_per_tenant": 6,
+  "plans": [
+    {
+      "code": "starter",
+      "allowed_kinds": ["web"],
+      "cpu_weight": 100,
+      "memory_high": "256M",
+      "memory_max": "384M",
+      "tasks_max": 128,
+      "cpu_quota_percent": 25,
+      "max_services": 1
+    },
+    {
+      "code": "standard",
+      "allowed_kinds": ["web", "database", "git"],
+      "cpu_weight": 200,
+      "memory_high": "768M",
+      "memory_max": "1G",
+      "tasks_max": 256,
+      "cpu_quota_percent": 75,
+      "max_services": 3
+    },
+    {
+      "code": "pro",
+      "allowed_kinds": ["web", "database", "git"],
+      "cpu_weight": 300,
+      "memory_high": "1G",
+      "memory_max": "1536M",
+      "tasks_max": 512,
+      "cpu_quota_percent": 150,
+      "max_services": 6
+    },
+    {
+      "code": "vault",
+      "allowed_kinds": ["storage"],
+      "cpu_weight": 100,
+      "memory_high": "512M",
+      "memory_max": "768M",
+      "tasks_max": 256,
+      "cpu_quota_percent": 50,
+      "max_services": 1
+    }
+  ],
+  "tenants": [
+    { "tenant_id": "t01", "allowed_plans": ["starter", "standard", "pro"] },
+    { "tenant_id": "t02", "allowed_plans": ["standard", "pro"] },
+    { "tenant_id": "t03", "allowed_plans": ["vault"] },
+    { "tenant_id": "t04", "allowed_plans": ["pro"] }
+  ]
+}

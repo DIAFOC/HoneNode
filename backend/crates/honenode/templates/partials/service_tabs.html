@@ -1,0 +1,8 @@
+<nav class="tabs" aria-label="Secciones del servicio">
+  <a href="/portal/services/{{ service_id }}"{% if tab == "overview" %} aria-current="page"{% endif %}>Resumen</a>
+  {% if is_web %}
+  <a href="/portal/services/{{ service_id }}/site"{% if tab == "site" %} aria-current="page"{% endif %}>Contenido</a>
+  {% endif %}
+  <a href="/portal/services/{{ service_id }}/configuration"{% if tab == "configuration" %} aria-current="page"{% endif %}>Configuración</a>
+  <a href="/portal/services/{{ service_id }}/logs"{% if tab == "logs" %} aria-current="page"{% endif %}>Registros</a>
+</nav>

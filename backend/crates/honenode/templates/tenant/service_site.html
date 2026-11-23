@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Contenido del sitio</h1>
+<p class="lede">Servicio {{ service_label }} · {{ tenant_name }} · unidad <span class="mono">{{ unit }}</span></p>
+{% include "partials/service_tabs.html" %}
+
+{% if has_notice %}
+<div class="notice"><p>{{ notice }}</p></div>
+{% endif %}
+
+<section class="card">
+  <h3>Archivo estático</h3>
+  <p class="hint">El servidor nginx sirve esta carpeta en la URL del servicio. Puedes crear o editar archivos de texto como <code>index.html</code>, <code>css/site.css</code> o <code>js/app.js</code>. Los archivos binarios (imágenes, fuentes) no se pueden subir desde este formulario.</p>
+  <form method="post" action="/portal/services/{{ service_id }}/site" autocomplete="off">
+    <input type="hidden" name="csrf" value="{{ principal.csrf }}">
+    <div class="field">
+      <label for="site_path">Ruta relativa</label>
+      <input id="site_path" name="site_path" value="{{ site_path }}" required maxlength="256" pattern="[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*" placeholder="index.html" aria-describedby="site-path-hint">
+      <p class="hint" id="site-path-hint">Sin barra inicial, sin <code>..</code> y sin espacios. Máximo 64 KiB de texto por archivo.</p>
+    </div>
+    <div class="field">
+      <label for="site_content">Contenido</label>
+      <textarea id="site_content" name="site_content" rows="18" maxlength="65536" spellcheck="false">{{ site_content }}</textarea>
+    </div>
+    <button class="primary" type="submit">Guardar archivo</button>
+  </form>
+</section>
+<p class="hint">El broker escribe el archivo con el usuario del inquilino y lo etiqueta para el contenedor. No hay shell, no se puede salir de la carpeta del sitio y el contenedor sigue siendo de solo lectura.</p>
+{% endblock %}
