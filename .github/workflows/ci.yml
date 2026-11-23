@@ -108,7 +108,7 @@ jobs:
             .
       - name: Upload Semgrep SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
           category: semgrep
@@ -128,7 +128,7 @@ jobs:
           skip-files: 'backend/crates/honenode/src/tests.rs,backend/crates/honenode/src/observation_tests.rs,backend/crates/honenode/src/portal_service_tests.rs,backend/crates/honenode/src/provisioning_tests.rs,backend/crates/honenode/tests/*,packaging/tests/*,backend/crates/honenode/SIGNUP_BILLING.md,security/HoneNode_Threat_Model_STRIDE.json'
       - name: Upload Trivy SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
@@ -149,7 +149,7 @@ jobs:
           osv-scanner --lockfile=backend/Cargo.lock --format sarif --output osv-scanner.sarif || true
       - name: Upload OSV-Scanner SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: osv-scanner.sarif
           category: osv-scanner
