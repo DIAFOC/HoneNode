@@ -126,7 +126,23 @@ pkill -f 'release/honenode' 2>/dev/null || true
 rm -rf "$STATE" "$ETC" "$RUNDIR"
 mkdir -p "$STATE/registry" "$ETC/caddy" "$RUNDIR" /etc/containers/systemd/users
 install -m 0644 "$BACKEND/crates/honed/policy.selfservice.example.json" "$ETC/policy.json"
-ok "self-service policy installed (starter 2×7d, pro 6×30d, t* wildcard)"
+# The example policy targets an 8-CPU host. The broker rejects a host budget
+# above the detected CPU capacity, so adapt it to this container's affinity and
+# keep each plan's quota inside the resulting budget.
+python3 - "$ETC/policy.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+with open(path) as source:
+    policy = json.load(source)
+host = max(100, len(os.sched_getaffinity(0)) * 100)
+policy["host_cpu_quota_percent"] = host
+for plan in policy["plans"]:
+    plan["cpu_quota_percent"] = min(plan["cpu_quota_percent"], max(1, host // 4))
+with open(path, "w") as target:
+    json.dump(policy, target, indent=2)
+    target.write("\n")
+PY
+ok "self-service policy installed (starter 2×7d, pro 6×30d, t* wildcard, host CPU adapted)"
 
 id -u "$SMOKE_USER" >/dev/null 2>&1 || useradd --create-home --shell /bin/bash "$SMOKE_USER"
 # The broker binds its socket 0660 root:root; the app connects through it.
