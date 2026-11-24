@@ -347,21 +347,15 @@ jobs:
           path: packaging/os/dist/*.tar.gz
           if-no-files-found: error
 
-  # Run the bundle installer and the full smoke inside a Rocky 10 init container
-  # so systemd is PID 1. This exercises the same artifact users get, not a source
-  # rebuild, and it gates the workflow.
+  # A GitHub Actions job container cannot boot systemd: the runner overrides
+  # the image entrypoint with `tail -f /dev/null`, so `systemctl` always fails.
+  # Boot the Rocky init container from the Ubuntu host instead, then install
+  # the bundle and run the smoke inside it via podman exec.
   smoke-rocky:
     name: Rocky 10 bundle install + smoke
     needs: rocky-build
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    container:
-      image: quay.io/rockylinux/rockylinux:10-ubi-init
-      options: --privileged --cgroupns=host
-    env:
-      HONENODE_REPO: ${{ github.workspace }}
-      HONE_SUBID_BASE: 2000
-      HONE_SUBID_COUNT: 63536
     steps:
       - uses: actions/checkout@v7
       - name: Download Rocky bundle
@@ -369,39 +363,22 @@ jobs:
         with:
           name: rocky-bundle
           path: bundle-archive
-      - name: Prepare bundle
+      - name: Install Podman
         run: |
-          for _ in $(seq 1 60); do
-            state=$(systemctl is-system-running 2>/dev/null || true)
-            case "$state" in running|degraded) break ;; esac
-            sleep 1
-          done
-          systemctl is-system-running || true
-          dnf -y install python3 curl
-          mkdir -p /workspace/bundle
-          tar -xzf bundle-archive/*.tar.gz -C /workspace/bundle
-          bundle_dir=$(find /workspace/bundle -maxdepth 1 -mindepth 1 -type d -name 'honenode-*' | head -1)
-          test -n "$bundle_dir"
-          echo "BUNDLE_DIR=$bundle_dir" >> "$GITHUB_ENV"
-      - name: Install the bundle
-        run: python3 "$BUNDLE_DIR/install.py" --yes --install-deps 2>&1 | tee /tmp/installer.log
-      - name: Verify installed services
-        run: |
-          systemctl --no-pager --full status honed.service honenode.service
-          curl -fsS http://127.0.0.1:8088/healthz >/dev/null
-      - name: Run Rocky smoke against the bundle binaries
+          sudo apt-get update
+          sudo apt-get install -y podman passt uidmap fuse-overlayfs slirp4netns
+          podman --version
+      - name: Install the bundle and run the smoke in a Rocky init container
         run: |
           set -o pipefail
-          HONED_BIN="$BUNDLE_DIR/broker/honed" \
-          HONENODE_BIN="$BUNDLE_DIR/native/honenode" \
-            bash packaging/rocky/smoke.sh 2>&1 | tee /tmp/rocky-smoke.log
+          sudo bash packaging/rocky/run_smoke_podman.sh \
+            --bundle bundle-archive/*.tar.gz 2>&1 | tee /tmp/rocky-smoke.log
       - name: Test summary
         if: always()
         run: |
           {
             echo '### Rocky bundle install + smoke'
-            systemctl is-active honed.service honenode.service || true
-            grep '^PASS=' /tmp/rocky-smoke.log || true
+            grep -E '^(PASS|FAIL)=' /tmp/rocky-smoke.log || true
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload Rocky smoke log
         if: always()

@@ -8,6 +8,13 @@
 # by hand in a distrobox Rocky box.
 #
 #   bash packaging/rocky/run_smoke_podman.sh [--app-only|--build-only] [--prebuilt]
+#   bash packaging/rocky/run_smoke_podman.sh --bundle <honenode-*.tar.gz>
+#
+# --bundle installs the OS-tagged bundle with install.py inside the Rocky
+# container, verifies the two services, and then runs the smoke against the
+# bundle binaries. This is the CI path: a GitHub Actions job container cannot
+# boot systemd because the runner overrides its entrypoint, so the Rocky init
+# container must be started here, from the host.
 # =============================================================================
 set -euo pipefail
 
@@ -17,18 +24,31 @@ IMAGE=${SMOKE_IMAGE:-quay.io/rockylinux/rockylinux:10-ubi-init}
 NAME=honenode-rocky-smoke
 ARGS=()
 PREBUILT=0
-for arg in "$@"; do
-  case "$arg" in
-    --app-only) ARGS+=(--app-only) ;;
-    --build-only) ARGS+=(--build-only) ;;
-    --prebuilt) PREBUILT=1 ;;
-    *) echo "usage: run_smoke_podman.sh [--app-only|--build-only] [--prebuilt]" >&2; exit 2 ;;
+BUNDLE_ARCHIVE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --app-only) ARGS+=(--app-only); shift ;;
+    --build-only) ARGS+=(--build-only); shift ;;
+    --prebuilt) PREBUILT=1; shift ;;
+    --bundle)
+      [[ $# -ge 2 ]] || { echo "usage: run_smoke_podman.sh --bundle <honenode-*.tar.gz>" >&2; exit 2; }
+      BUNDLE_ARCHIVE=$2
+      shift 2
+      ;;
+    *) echo "usage: run_smoke_podman.sh [--app-only|--build-only] [--prebuilt] [--bundle <archive>]" >&2; exit 2 ;;
   esac
 done
 
 BIN_ENV=()
+BUNDLE_MOUNT=()
 PACKAGES="curl jq sqlite podman passt shadow-utils systemd-udev"
-if [[ "$PREBUILT" == 1 ]]; then
+if [[ -n "$BUNDLE_ARCHIVE" ]]; then
+  BUNDLE_ARCHIVE=$(realpath "$BUNDLE_ARCHIVE")
+  [[ -f "$BUNDLE_ARCHIVE" ]] || { echo "FAIL: bundle archive not found: $BUNDLE_ARCHIVE" >&2; exit 1; }
+  BUNDLE_FILE=$(basename "$BUNDLE_ARCHIVE")
+  BUNDLE_MOUNT+=(-v "$(dirname "$BUNDLE_ARCHIVE"):/bundle:ro")
+  PACKAGES="$PACKAGES python3 policycoreutils libcap util-linux"
+elif [[ "$PREBUILT" == 1 ]]; then
   HONED_BIN="$REPO/packaging/os/dist/rocky/honed"
   HONENODE_BIN="$REPO/packaging/os/dist/rocky/honenode"
   if [[ ! -x "$HONED_BIN" || ! -x "$HONENODE_BIN" ]]; then
@@ -55,6 +75,7 @@ if ! podman run -d --name "$NAME" \
   --systemd=always \
   "${CGROUP_ARGS[@]}" \
   -v "$REPO:/workspace" \
+  "${BUNDLE_MOUNT[@]}" \
   -e HONENODE_REPO=/workspace \
   "$IMAGE" >/dev/null; then
   echo "FAIL: podman could not start $IMAGE" >&2
@@ -84,6 +105,22 @@ podman exec "$NAME" systemctl is-system-running || true
 # The smoke needs the Rust toolchain and the container runtime stack; install
 # them once here so smoke.sh stays focused on the acceptance flow.
 podman exec "$NAME" dnf -y install $PACKAGES
+
+if [[ -n "$BUNDLE_ARCHIVE" ]]; then
+  podman exec "$NAME" mkdir -p /tmp/bundle
+  podman exec "$NAME" tar -xzf "/bundle/$BUNDLE_FILE" -C /tmp/bundle
+  bundle_dir=$(podman exec "$NAME" find /tmp/bundle -maxdepth 1 -mindepth 1 -type d -name 'honenode-*' -print -quit)
+  if [[ -z "$bundle_dir" ]]; then
+    echo "FAIL: $BUNDLE_FILE did not contain a honenode-* directory" >&2
+    exit 1
+  fi
+  echo "Installing bundle from $bundle_dir ..."
+  podman exec "$NAME" python3 "$bundle_dir/install.py" --yes --install-deps
+  podman exec "$NAME" systemctl --no-pager --full status honed.service honenode.service
+  podman exec "$NAME" curl -fsS http://127.0.0.1:8088/healthz >/dev/null
+  BIN_ENV+=(-e HONED_BIN="$bundle_dir/broker/honed")
+  BIN_ENV+=(-e HONENODE_BIN="$bundle_dir/native/honenode")
+fi
 
 podman exec \
   -e HONENODE_REPO=/workspace \
