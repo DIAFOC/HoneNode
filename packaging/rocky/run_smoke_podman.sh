@@ -42,11 +42,18 @@ else
 fi
 
 podman rm -f "$NAME" >/dev/null 2>&1 || true
+# Rootful Podman on a systemd runner needs the host cgroup namespace for the
+# nested Rocky systemd; rootless Podman keeps its own namespace.
+CGROUP_ARGS=()
+if [[ $EUID -eq 0 ]]; then
+  CGROUP_ARGS+=(--cgroupns=host)
+fi
 # No command override: --systemd=always boots systemd as PID 1.
 if ! podman run -d --name "$NAME" \
   --hostname rocky-smoke \
   --privileged \
   --systemd=always \
+  "${CGROUP_ARGS[@]}" \
   -v "$REPO:/workspace" \
   -e HONENODE_REPO=/workspace \
   "$IMAGE" >/dev/null; then

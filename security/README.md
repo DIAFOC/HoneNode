@@ -13,7 +13,7 @@ the tools that run in `.github/workflows/ci.yml`.
 | Vulnerable dependencies / supply chain | Cargo Audit, OSV-Scanner, Trivy filesystem, Cargo Deny, Dependency Review | security | yes |
 | Container/image hardening | Hadolint, Trivy misconfiguration, distroless `Containerfile` | security / release | yes |
 | Web headers, XSS, CSRF, information disclosure | ZAP baseline against the login surface, app CSP/security headers | dast | advisory |
-| Host hardening | OpenSCAP CIS profile and Lynis inside Rocky 10 | openscap / lynis | advisory |
+| Host hardening | OpenSCAP container smoke and Lynis inside Rocky 10 | openscap / lynis | advisory |
 | End-to-end provisioning | Rocky 10 smoke on the built binaries with nested Podman | smoke-rocky | advisory on GitHub |
 
 ## Accepted advisories (0.8.8)
@@ -57,6 +57,10 @@ image yet.
   lockfile; Trivy covers the image layers and the Containerfile misconfiguration.
 - OpenSCAP and Lynis audit the Rocky container, not the GitHub runner. Their
   reports are artifacts because the real target host is the SharpNode machine.
+  The OpenSCAP datastream has no container profile; the host CIS profile is used
+  as a tool smoke and many controls are correctly `notapplicable` in a container
+  (no bootloader, kernel, partitioning or host services). This is not a host
+  compliance result; a real host scan needs a Rocky VM or a self-hosted runner.
 - ZAP scans the login/signup surface of the app image; the tenant pages need a
   live broker and are covered by the Rocky smoke instead.
 - The custom rules intentionally avoid flagging `Command::new(program)` in the

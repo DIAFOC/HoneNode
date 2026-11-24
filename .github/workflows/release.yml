@@ -99,6 +99,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           version: v0.76.2
+          limit-severities-for-sarif: true
       - name: Upload Trivy release image SARIF
         if: always() && hashFiles('trivy-release-image.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4

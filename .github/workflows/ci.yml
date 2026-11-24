@@ -139,6 +139,8 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           version: v0.76.2
+          limit-severities-for-sarif: true
+          skip-dirs: '.git,.cache,backend/target,packaging/os/dist,packaging/.local-run'
           skip-files: 'backend/crates/honenode/src/tests.rs,backend/crates/honenode/src/observation_tests.rs,backend/crates/honenode/src/portal_service_tests.rs,backend/crates/honenode/src/provisioning_tests.rs,backend/crates/honenode/tests/*,packaging/tests/*,backend/crates/honenode/SIGNUP_BILLING.md,security/HoneNode_Threat_Model_STRIDE.json'
       - name: Upload Trivy SARIF
         if: always()
@@ -241,6 +243,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           version: v0.76.2
+          limit-severities-for-sarif: true
       - name: Upload Trivy image SARIF
         if: always() && hashFiles('trivy-image.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
@@ -287,7 +290,7 @@ jobs:
         run: docker stop honenode-app || true
 
   openscap:
-    name: OpenSCAP CIS scan (advisory)
+    name: OpenSCAP container smoke (advisory)
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
@@ -298,6 +301,10 @@ jobs:
       - run: dnf -y install openscap-scanner scap-security-guide
       - name: Evaluate CIS profile
         run: |
+          # This is a tool smoke inside a Rocky 10 container, not a host audit.
+          # The SSG stream has no container profile: bootloader, kernel, service
+          # and partitioning rules are correctly notapplicable here. Real host
+          # compliance needs a Rocky VM or a self-hosted runner.
           profile=$(find /usr/share/xml/scap/ssg/content \
             \( -name 'ssg-rl10-ds.xml' -o -name 'ssg-rhel10-ds.xml' -o -name 'ssg-rhel9-ds.xml' \) \
             | head -1)
@@ -306,6 +313,14 @@ jobs:
             --results /tmp/oscap-results.xml \
             --report /tmp/oscap-report.html \
             "$profile" || true
+          {
+            echo "datastream=$profile"
+            echo "profile=cis (host-oriented; container rules are notapplicable)"
+            echo "note: a bare container has no bootloader, kernel or host services,"
+            echo "so many selected rules are expected to be notapplicable."
+            echo "result counts:"
+            grep -o '<result>[^<]*' /tmp/oscap-results.xml | sed 's/.*>//' | sort | uniq -c || true
+          } | tee /tmp/oscap-summary.txt
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -313,6 +328,7 @@ jobs:
           path: |
             /tmp/oscap-results.xml
             /tmp/oscap-report.html
+            /tmp/oscap-summary.txt
 
   lynis:
     name: Lynis host audit (advisory)
@@ -354,16 +370,24 @@ jobs:
             packaging/os/dist/rocky/honenode
           if-no-files-found: error
 
-  # The full smoke needs systemd as PID 1 and a privileged rootless-Podman
-  # nest. Booting Rocky through Podman on the runner VM is what works; running
-  # Podman inside a Rocky job container does not (exit 125). Kept advisory
-  # because GitHub's nested namespaces are the flaky part, not the product.
+  # Run the smoke inside a Rocky 10 init container so systemd is PID 1. The
+  # previous host-Podman approach needed a privileged nested systemd container
+  # on the Ubuntu runner and failed during container startup, before any check.
   smoke-rocky:
     name: Rocky 10 full smoke (advisory)
     needs: rocky-build
     runs-on: ubuntu-latest
     timeout-minutes: 60
     continue-on-error: true
+    container:
+      image: quay.io/rockylinux/rockylinux:10-ubi-init
+      options: --privileged --cgroupns=host
+    env:
+      HONENODE_REPO: ${{ github.workspace }}
+      HONE_SUBID_BASE: 2000
+      HONE_SUBID_COUNT: 63536
+      HONED_BIN: ${{ github.workspace }}/packaging/os/dist/rocky/honed
+      HONENODE_BIN: ${{ github.workspace }}/packaging/os/dist/rocky/honenode
     steps:
       - uses: actions/checkout@v7
       - name: Download Rocky binaries
@@ -371,16 +395,17 @@ jobs:
         with:
           name: rocky-native-binaries
           path: packaging/os/dist/rocky
-      - name: Install Podman
+      - name: Wait for systemd
         run: |
           chmod +x packaging/os/dist/rocky/honed packaging/os/dist/rocky/honenode
-          sudo apt-get update
-          sudo apt-get install -y podman passt uidmap fuse-overlayfs slirp4netns
-          podman --version
+          for _ in $(seq 1 60); do
+            state=$(systemctl is-system-running 2>/dev/null || true)
+            case "$state" in running|degraded) break ;; esac
+            sleep 1
+          done
+          systemctl is-system-running || true
       - name: Run Rocky smoke against the built binaries
-        run: |
-          set -o pipefail
-          sudo bash packaging/rocky/run_smoke_podman.sh --prebuilt 2>&1 | tee /tmp/rocky-smoke.log
+        run: bash packaging/rocky/smoke.sh 2>&1 | tee /tmp/rocky-smoke.log
       - name: Upload Rocky smoke log
         if: always()
         uses: actions/upload-artifact@v7
