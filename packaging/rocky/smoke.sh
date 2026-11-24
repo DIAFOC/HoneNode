@@ -244,6 +244,10 @@ T_PASSWORD=$(echo "$SIGNUP_HTML" | sed -n 's/.*Contraseña<\/dt><dd class="mono"
 [[ -n "$T_PASSWORD" ]] && ok "tenant password generated" || bad "tenant password"
 sqlite3 "$STATE/registry/registry.db" "SELECT paid_through IS NOT NULL FROM subscriptions" \
   | grep -q 1 && ok "trial subscription stored in SQLite" || bad "trial subscription"
+TENANT_JOB_REASON=$(sqlite3 "$STATE/registry/registry.db" \
+  "SELECT error FROM jobs WHERE action='tenant.create' ORDER BY id DESC LIMIT 1")
+[[ -z "$TENANT_JOB_REASON" ]] && ok "broker tenant.create succeeded" \
+  || bad "broker tenant.create: $TENANT_JOB_REASON"
 
 SESSION=$(login_session "$T_NUMBER" "$T_PASSWORD" "$JAR") && \
   ok "tenant logs in with generated credentials" || bad "tenant login"

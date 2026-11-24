@@ -122,6 +122,7 @@ if [[ -n "$BUNDLE_ARCHIVE" ]]; then
   BIN_ENV+=(-e HONENODE_BIN="$bundle_dir/native/honenode")
 fi
 
+set +e
 podman exec \
   -e HONENODE_REPO=/workspace \
   -e HONE_SUBID_BASE=2000 \
@@ -129,3 +130,15 @@ podman exec \
   "${BIN_ENV[@]}" \
   "$NAME" \
   bash /workspace/packaging/rocky/smoke.sh ${ARGS[@]+"${ARGS[@]}"}
+smoke_status=$?
+set -e
+if [[ $smoke_status -ne 0 ]]; then
+  echo "=== smoke broker log (tail) ===" >&2
+  podman exec "$NAME" tail -n 80 /var/lib/honenode-smoke/honed.log >&2 || true
+  echo "=== smoke app log (tail) ===" >&2
+  podman exec "$NAME" tail -n 80 /var/lib/honenode-smoke/app.log >&2 || true
+  echo "=== tenant.create job ===" >&2
+  podman exec "$NAME" sqlite3 /var/lib/honenode-smoke/registry/registry.db \
+    "SELECT state, error FROM jobs WHERE action='tenant.create' ORDER BY id DESC LIMIT 1" >&2 || true
+fi
+exit "$smoke_status"
