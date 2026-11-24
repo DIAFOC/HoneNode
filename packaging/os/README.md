@@ -34,16 +34,19 @@ Each bundle contains the app (`native/honenode`), the broker
 `README.md`, `manifest.json` and `SHA256SUMS`.
 
 The Fedora bundle's README describes its contents and build. The Rocky
-bundle's README documents the RPM host path and the repeatable smoke test. The
-host deployment scripts themselves (the Fedora lab wizard and reset helper)
-live in the SharpNode host repository, outside this app source tree.
+bundle's README documents the precompiled binaries, the manual host-integration
+boundary and the repeatable smoke test. The host deployment scripts themselves
+(the Fedora lab wizard and reset helper) live in the SharpNode host repository,
+outside this app source tree.
 
 ## Verification
 
 `packaging/os/fedora/build.sh` runs the Rust and Python suites before writing
 the bundle. `packaging/os/rocky/build.sh` builds inside the same Rocky 10
-container as `packaging/rocky/run_smoke_podman.sh`; run the full smoke
-separately to exercise the runtime flow.
+container as `packaging/rocky/run_smoke_podman.sh`; after building, run
+`bash packaging/rocky/run_smoke_podman.sh --prebuilt` to exercise those exact
+binaries. CI compiles the Rocky binaries once and runs the full smoke with
+`--prebuilt`, rather than rebuilding inside the smoke.
 
-`python3.14 -m unittest discover -s packaging/tests` covers the bundle builder,
+`python3 -m unittest discover -s packaging/tests` covers the bundle builder,
 including the OS tag and the rejection of an unknown target.

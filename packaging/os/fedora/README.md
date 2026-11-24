@@ -26,9 +26,9 @@ GitHub release.
 ## Runtime
 
 The bundle contains the app and broker binaries; it does not install a host
-service, create tenants, or start anything. The Fedora lab wizard, reset helper
-and demo-image loader live in the SharpNode host repository, outside this app
-source tree. Use the OS-specific bundle with the matching host.
+service, create tenants, or start anything. Host integration is manual in
+0.8.8: review the examples, install the broker unit and policy, and start the
+app from the extracted tree. Use the OS-specific bundle with the matching host.
 
 The app starts with `HONE_BIND`, `HONE_BROKER_SOCKET`, `HONE_REGISTRY`,
 `HONE_STATIC_DIR` and the policy/tenant environment. On first boot it generates

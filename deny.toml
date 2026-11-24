@@ -5,11 +5,10 @@
 version = 2
 yanked = "warn"
 ignore = [
-  # sqlx 0.8.6 pins libsqlite3-sys ^0.30.1. The fix ships in libsqlite3-sys
-  # 0.39 (sqlx 0.9), which requires Rust 1.94 and is therefore not buildable
-  # with the Rocky 10 distro toolchain. Revisit when the bundles move to a
-  # newer toolchain. Exposure requires a crafted database + WAL pair written
-  # by a less-trusted local party; tenants cannot write the registry directory.
+  # sqlx 0.9.1 still pins libsqlite3-sys ^0.30.1; the fix waits on upstream
+  # adoption of libsqlite3-sys 0.39. Exposure needs a crafted database + WAL
+  # pair written by a less-trusted local party; the registry directory is
+  # root/app-owned and tenants have no host access. Revisit in 0.8.9.
   "RUSTSEC-2026-0459",
 ]
 

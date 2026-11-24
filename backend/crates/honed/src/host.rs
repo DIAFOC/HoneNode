@@ -660,7 +660,16 @@ pub fn write_unit_with_options(
         None
     };
 
-    crate::provisioning::setup_service(config, slug, envelope.kind, instance)?;
+    let database_password = options
+        .and_then(|options| options.database.as_ref())
+        .map(|database| database.password.expose());
+    crate::provisioning::setup_service(
+        config,
+        slug,
+        envelope.kind,
+        instance,
+        database_password,
+    )?;
     let created = match &storage {
         Some(StoragePlan::Create { username, hash, .. }) => {
             crate::service_config::create_settings(

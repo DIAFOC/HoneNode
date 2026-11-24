@@ -180,13 +180,12 @@ The nginx template is no longer a placeholder-only server. A tenant can open
 `css/site.css`, `js/app.js`, ...). The broker resolves every component with
 `O_NOFOLLOW`, writes through a temporary sibling and renames it into place,
 chowns it to the tenant and labels it for containers; nginx keeps serving a
-read-only mount. The Express blog in this repository is **not** static, so it
-runs as a generic container instead: `packaging/fedora/load_blog_image.sh`
-builds `localhost/honenode/seclab:1.0` and loads it into the tenant's rootless
-store, and the tenant creates it from **Nuevo servicio** (the generic container
-form) with image `localhost/honenode/seclab:1.0`, port 3000, UID 1000,
-`PORT=3000` and `NODE_ENV=production`. The blog is not a catalogue card; the
-image reference is entered by the tenant.
+read-only mount. The Express blog used in the SharpNode lab is **not** part of this repository,
+so it runs as a generic container when the operator supplies it. After building
+and loading that image into the tenant's rootless store, create it from **Nuevo
+servicio** (the generic container form) with the image reference, port 3000,
+UID 1000, `PORT=3000` and `NODE_ENV=production`. The blog is not a catalogue
+card; the image reference is entered by the tenant.
 
 ## 8. Two product fixes surfaced by the Rocky smoke
 
@@ -208,14 +207,9 @@ real defects, both fixed in `honed`:
 
 ## 8b. Boot/restart wizard and OS-tagged bundles
 
-The native Fedora lab has a wizard, `packaging/fedora/lab.py`. It starts the
-broker first (the app launcher deliberately does not), waits for the real
-socket and `/healthz`, and then shows the first-run operator credentials once
-and offers to delete the static bootstrap file. `status`, `stop`, `reset`,
-`credentials`, `url` and an interactive menu are included; `reset` clears stale
-units, state and tenant data before starting fresh. The broker remains
-intentionally disabled at boot, so a reboot is recovered with
-`python3 packaging/fedora/lab.py start` instead of a manual `systemctl` hunt.
+The native Fedora lab wizard lives in the SharpNode host repository, outside
+this app source tree. This repository's release interface is the OS-tagged
+bundle plus its examples; the lab wizard is not part of the HoneNode release.
 
 Packaging is now explicitly per OS: `packaging/os/fedora/build.sh` builds and
 tags a Fedora bundle, and `packaging/os/rocky/build.sh` boots Rocky 10, builds
@@ -224,14 +218,14 @@ libc/interpreter. One tarball is no longer presented as portable across both.
 
 ## 9. Acceptance notes
 
-* `cargo test`: 107 broker + 76 app tests, including sign-up (one-time
+* `cargo test`: 108 broker + 77 app tests, including sign-up (one-time
   credentials, trial subscription, allowlist exhaustion), keys (additive
   redemption, reuse refusal, hash-only storage), the subscription cap, static
   site writes and multiple instances of one kind.
-* `python3.14 -m unittest discover -s backend/crates/honenode/tests`: 33 tests,
+* `python3 -m unittest discover -s backend/crates/honenode/tests`: 33 tests,
   including the production SQL executed against SQLite (the login-limit query
   now lives in `auth::limit_bucket`).
-* `python3.14 -m unittest discover -s packaging/tests`: 53 tests, including the
+* `python3 -m unittest discover -s packaging/tests`: 53 tests, including the
   OS-tagged bundle builder (Fedora/Rocky tag, bad target, bad suffix).
 * Rocky smoke (`packaging/rocky/run_smoke_podman.sh`, Rocky 10 + systemd in a
   privileged container): the benchmark signs up a tenant, redeems a pro key,

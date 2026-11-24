@@ -14,21 +14,36 @@ the tools that run in `.github/workflows/ci.yml`.
 | Container/image hardening | Hadolint, Trivy misconfiguration, distroless `Containerfile` | security / release | yes |
 | Web headers, XSS, CSRF, information disclosure | ZAP baseline against the login surface, app CSP/security headers | dast | advisory |
 | Host hardening | OpenSCAP CIS profile and Lynis inside Rocky 10 | openscap / lynis | advisory |
-| End-to-end provisioning | Rocky 10 smoke with nested Podman | smoke-rocky | advisory on GitHub |
+| End-to-end provisioning | Rocky 10 smoke on the built binaries with nested Podman | smoke-rocky | advisory on GitHub |
 
 ## Accepted advisories (0.8.8)
 
-Both are ignored by `cargo audit` and `cargo deny` with the rationale below.
-They are tracked for the next dependency pass.
+The shipped OCI image and the OS bundles are **precompiled**; users do not
+compile. The acceptance below is therefore about runtime reachability in the
+shipped artifacts, not about asking a user to build around a vulnerable crate.
+Both advisories are ignored explicitly by `cargo audit`; `cargo deny` ignores
+the SQLite advisory and does not encounter `rsa` because the `sqlx-mysql` path
+is not compiled.
 
-- **RUSTSEC-2026-0459** — `libsqlite3-sys` 0.30.1 via `sqlx` 0.8.6. The fix
-  ships in `libsqlite3-sys` 0.39 / `sqlx` 0.9, which requires Rust 1.94 and
-  cannot be built by the Rocky 10 distro toolchain. Exposure needs a crafted
-  database plus `-wal` file written by a less-trusted local party; the
-  registry directory is root-owned and tenants have no host access.
+- **RUSTSEC-2026-0459** — `libsqlite3-sys` 0.30.1 via `sqlx`. The patched crate
+  is 0.39 (rusqlite 0.41 / sqlx 0.9 lineage), but sqlx 0.9.1 still pins
+  `libsqlite3-sys` 0.30.1. Rocky 10 provides Rust 1.97, so the toolchain is no
+  longer the blocker; this is an upstream dependency gap. The app opens only
+  its own registry database, in a root/app-owned directory; tenants have no
+  host access and cannot supply a crafted database plus `-wal` pair. Fix paths
+  for 0.8.9: wait for sqlx to adopt 0.39, vendor-patch `sqlx-sqlite`, or link a
+  system SQLite and prove the version on each shipped runtime.
 - **RUSTSEC-2023-0071** — `rsa` 0.9.10. It is pulled only by the optional
   `sqlx-mysql` crate, which this workspace does not enable or compile; the
-  advisory is therefore not reachable in the shipped binary.
+  advisory is not reachable in the shipped binary. A tested sqlx 0.9.1 update
+  removes it from `Cargo.lock` entirely (107 broker + 75 app tests passed
+  unchanged), so it is a candidate for the 0.8.9 dependency pass rather than a
+  reason to ship a different 0.8.8.
+
+The image scan is gated at CRITICAL/HIGH (currently clean); the accepted
+advisories are MEDIUM and appear in the dependency reports, not in the image
+gate. There is no claim of SBOM signing, provenance, or a digest-pinned base
+image yet.
 
 ## Notes
 

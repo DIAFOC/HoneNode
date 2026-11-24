@@ -311,6 +311,12 @@ fn validate_options(
         }
     }
     let file_manager = options.and_then(|options| options.file_manager.as_ref());
+    let database = options.and_then(|options| options.database.as_ref());
+    if database.is_some() && kind != ServiceKind::Database {
+        return Err(AppError::BadRequest(
+            "las credenciales de PostgreSQL solo aplican a la base de datos".to_string(),
+        ));
+    }
     match kind {
         ServiceKind::Storage => {
             let file_manager = file_manager.ok_or_else(|| {
@@ -326,6 +332,28 @@ fn validate_options(
                 ));
             }
             service_options::validate_new_password(&file_manager.password)?;
+        }
+        ServiceKind::Database => {
+            if let Some(options) = options {
+                let database = database.ok_or_else(|| {
+                    AppError::BadRequest(
+                        "la base de datos requiere una contraseña inicial de PostgreSQL; usa el asistente de despliegue"
+                            .to_string(),
+                    )
+                })?;
+                if database.password.is_empty() {
+                    return Err(AppError::BadRequest(
+                        "la contraseña inicial de PostgreSQL no puede estar vacía".to_string(),
+                    ));
+                }
+                service_options::validate_database_password(&database.password)?;
+                if options.file_manager.is_some() {
+                    return Err(AppError::BadRequest(
+                        "las credenciales del gestor de archivos solo aplican al almacenamiento"
+                            .to_string(),
+                    ));
+                }
+            }
         }
         _ => {
             if file_manager.is_some() {

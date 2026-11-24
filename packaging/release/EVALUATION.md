@@ -35,8 +35,9 @@ The meaningful boundary is:
 | Bundle reproducibility | Two independent builds produced identical bytes |
 | Bundle integrity | Extracted `SHA256SUMS` passed for every listed payload |
 
-The generic acceptance harness is `packaging/fedora/whoami_acceptance.cjs`.
-The failed Forgejo reservation was not deleted or rewritten during that test.
+The generic acceptance harness used for that run was part of the SharpNode host
+lab, outside this repository. The failed Forgejo reservation was not deleted or
+rewritten during that test.
 
 ## Artifact
 

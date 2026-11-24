@@ -178,6 +178,14 @@ class ThemeTests(unittest.TestCase):
         self.assertIn('type="password"', password)
         self.assertNotIn("value=", password)
         self.assertIn('autocomplete="new-password"', password)
+        database_password = re.search(
+            r"<input[^>]+name=\"database_password\"[^>]*>", form
+        ).group(0)
+        self.assertIn('type="password"', database_password)
+        self.assertNotIn("value=", database_password)
+        self.assertIn('autocomplete="new-password"', database_password)
+        self.assertIn('data-generate-password="database_password"', form)
+        self.assertIn('data-generate-password="file_manager_password"', form)
         # Ports, paths, and resources are read-only broker-managed output.
         self.assertNotIn('name="ports"', form)
         self.assertNotIn('name="volumes"', form)

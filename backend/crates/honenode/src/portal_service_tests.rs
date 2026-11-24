@@ -223,6 +223,13 @@ fn storage_form(principal: &Principal) -> String {
     )
 }
 
+fn database_form(principal: &Principal) -> String {
+    format!(
+        "csrf={}&plan_code=root-plan&kind=database&image=approved.example/postgres:1&database_password={}",
+        principal.session.csrf_token, PASSWORD
+    )
+}
+
 fn two_plan_catalog() -> Value {
     json!([
         {"plan_code":"starter","label":"Starter","memory_high":"128M","memory_max":"256M",
@@ -232,6 +239,80 @@ fn two_plan_catalog() -> Value {
          "cpu_quota_percent":75,"tasks_max":128,"max_services":4,"service_days":30,
          "allowed_kinds":["web","database","container"],"images":{"web":"approved.example/nginx:1"}}
     ])
+}
+
+#[tokio::test]
+async fn database_deploy_sends_the_tenant_password_and_never_persists_it() {
+    let mut state = state().await;
+    let principal = principal(&state).await;
+    let fake = FakeBroker::new(
+        catalog(),
+        json!({"kind": "database", "image": "approved.example/postgres:1"}),
+        "",
+        None,
+    )
+    .await;
+    state.broker = broker::Client::new(fake.path.clone());
+
+    let response = post(&state, &principal, "/portal/services", database_form(&principal)).await;
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    let limits = fake
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .find(|request| request["op"] == "limits.set")
+        .unwrap()
+        .clone();
+    assert_eq!(limits["options"]["image"], "approved.example/postgres:1");
+    assert_eq!(limits["options"]["database"]["password"], PASSWORD);
+    assert!(limits["options"].get("file_manager").is_none());
+    for job in registry::recent_jobs(&state.db, 10).await.unwrap() {
+        assert!(!job.payload_json.contains(PASSWORD));
+        assert!(!job.payload_json.contains("password"));
+    }
+    for event in registry::audit_of_tenant(&state.db, principal.tenant_id().unwrap(), 10)
+        .await
+        .unwrap()
+    {
+        assert!(!event.reason.as_deref().unwrap_or_default().contains(PASSWORD));
+    }
+
+    let response = get(
+        &state,
+        &principal,
+        "/portal/deploy?plan_code=root-plan&kind=database",
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = text(response).await;
+    assert!(html.contains("name=\"database_password\""));
+    assert!(!html.contains("name=\"database_password\" value="));
+    assert!(html.contains("Contraseña inicial de PostgreSQL"));
+    assert!(html.contains("approved.example/postgres:1"));
+}
+
+#[tokio::test]
+async fn database_deploy_without_a_password_is_rejected_before_the_broker() {
+    let mut state = state().await;
+    let principal = principal(&state).await;
+    let fake = FakeBroker::new(
+        catalog(),
+        json!({"kind": "database", "image": "approved.example/postgres:1"}),
+        "",
+        None,
+    )
+    .await;
+    state.broker = broker::Client::new(fake.path.clone());
+    let form = format!(
+        "csrf={}&plan_code=root-plan&kind=database&image=approved.example/postgres:1",
+        principal.session.csrf_token
+    );
+    let response = post(&state, &principal, "/portal/services", form).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = text(response).await;
+    assert!(html.contains("requiere una contraseña inicial de PostgreSQL"));
+    assert!(!fake.ops().iter().any(|op| op == "limits.set"));
 }
 
 #[tokio::test]

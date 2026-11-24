@@ -5,11 +5,12 @@
 # runtime layer is distroless — no shell, no package manager, nothing to pivot
 # through.  The app has no host authority by construction (§3.4).
 #
-# Build (rootless, as the platform account — see deploy/06-app-build.sh):
+# Build (from the repository root):
 #     podman build -t localhost/honenode-app:dev -f backend/Containerfile backend/
 # =============================================================================
 
-FROM docker.io/library/rust:1-alpine AS build
+# Builder is pinned to a minor release; bump deliberately with the lockfile.
+FROM docker.io/library/rust:1.99-alpine AS build
 
 # build-base supplies musl-dev, gcc and make; sqlx's bundled SQLite is
 # compiled here too, so a C toolchain and the SQLite headers are required.

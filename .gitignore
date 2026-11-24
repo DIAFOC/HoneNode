@@ -26,5 +26,7 @@ packaging/release/*.tar.gz
 
 # Logs and local artifacts
 *.log
+*.sarif
+.cache/trivy/
 packaging/.local-run/
 .DS_Store

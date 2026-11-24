@@ -44,7 +44,10 @@ if [[ "${ID:-}" != "rocky" && "${ID_LIKE:-}" != *"rocky"* ]]; then
   echo "FAIL: this smoke must run on Rocky Linux (got ID=${ID:-unknown})" >&2
   exit 1
 fi
-echo "── Rocky ${VERSION_ID:-?} smoke (${APP_ONLY:+app-only}${APP_ONLY:-full}) ──"
+MODE=full
+[[ "$APP_ONLY" == 1 ]] && MODE=app-only
+[[ "$BUILD_ONLY" == 1 ]] && MODE=build-only
+echo "── Rocky ${VERSION_ID:-?} smoke ($MODE) ──"
 
 if [[ $EUID -ne 0 ]]; then
   echo "FAIL: run as root inside the distrobox/container (the broker needs host authority)" >&2
@@ -61,6 +64,9 @@ BIND=127.0.0.1:8080
 BASE=http://127.0.0.1:8080
 SMOKE_USER=honesmoke
 TENANTS=t01,t02,t03,t04,t05,t06
+DB_IMAGE="docker.io/library/postgres:17.11-alpine"
+DB_PASSWORD_ONE="BenchmarkDatabase2026"
+DB_PASSWORD_TWO="BenchmarkDatabase2026b"
 
 PASS=0; FAIL=0
 ok()   { echo "  ✓ $1"; PASS=$((PASS+1)); }
@@ -156,7 +162,7 @@ env HONE_BROKER_SOCKET="$SOCKET" \
     HONE_SUBID_BASE="${HONE_SUBID_BASE:-100000}" \
     HONE_TENANT_MEMORY_MAX="${HONE_TENANT_MEMORY_MAX:-8G}" \
     HONE_IMAGE_NGINX="docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e" \
-    HONE_IMAGE_POSTGRES="docker.io/library/postgres:17.11-alpine" \
+    HONE_IMAGE_POSTGRES="$DB_IMAGE" \
     "$HONED" >>"$STATE/honed.log" 2>&1 &
 for _ in $(seq 1 50); do
   [[ -S "$SOCKET" ]] && break
@@ -360,6 +366,22 @@ wait_tcp() {
   return 1
 }
 
+# psql_ok <unit> <database> <password> <label>
+psql_ok() {
+  local unit="$1" db="$2" password="$3" label="$4"
+  for _ in $(seq 1 30); do
+    if runuser -u t01 -- env XDG_RUNTIME_DIR="/run/user/$U" \
+        podman exec "$unit" env PGPASSWORD="$password" \
+        psql -U postgres -d "$db" -tAc 'select 1' 2>/dev/null | grep -qx '1'; then
+      ok "$label accepts the tenant password"
+      return 0
+    fi
+    sleep 1
+  done
+  bad "$label rejected the tenant password"
+  return 1
+}
+
 # 1. Static blog (nginx)
 OUT=$(provision web)
 echo "$OUT" | grep -q "30[23]" && ok "web template accepted" || bad "web template ($OUT)"
@@ -387,9 +409,10 @@ else
 fi
 
 # 2. Shop database (PostgreSQL)
-OUT=$(provision database)
+OUT=$(provision database --data-urlencode "image=$DB_IMAGE" -d "database_password=$DB_PASSWORD_ONE")
 echo "$OUT" | grep -q "30[23]" && ok "database template accepted" || bad "database template ($OUT)"
 wait_tcp 127.0.0.1 15431 "shop postgres" || true
+psql_ok t01-db t01 "$DB_PASSWORD_ONE" "shop postgres"
 
 # 3. Media vault (File Browser)
 OUT=$(provision storage -d "file_manager_username=admin" -d "file_manager_password=BenchmarkVault2026")
@@ -406,9 +429,10 @@ wait_tcp 127.0.0.1 22001 "git forge ssh" || true
 OUT=$(provision web)
 echo "$OUT" | grep -q "30[23]" && ok "second web instance accepted" || bad "second web instance ($OUT)"
 wait_http "http://127.0.0.1:18101/" "second nginx" || true
-OUT=$(provision database)
+OUT=$(provision database --data-urlencode "image=$DB_IMAGE" -d "database_password=$DB_PASSWORD_TWO")
 echo "$OUT" | grep -q "30[23]" && ok "second database instance accepted" || bad "second database instance ($OUT)"
 wait_tcp 127.0.0.1 15531 "second postgres" || true
+psql_ok t01-db-2 t01 "$DB_PASSWORD_TWO" "second postgres"
 
 # 6. Delete and re-provision the web template: the kind must be free again.
 WEB_ID=$(curl -fsS -b "$JAR" "$BASE/portal" | grep -o '/portal/services/[0-9]*' | head -1 | grep -o '[0-9]*$')

@@ -1,111 +1,66 @@
-# Fedora OCI preview validation — 2026-11-10
+# Fedora OCI preview validation — 2026-11-10 (historical)
+
+This file records an app-only preview validation performed during 0.8.x. It is
+not a release certification and not a claim of live tenant provisioning. The
+current acceptance path is the Rocky smoke plus the CI suites described in the
+root README and `packaging/README.md`.
 
 ## Outcome
 
-The interrupted app-preview validation is complete. The existing rootless
-`honenode-preview` container was found stopped with exit code 0, resumed, and
-left running at **http://127.0.0.1:8088/** (container port 8080).
+The rootless `honenode-preview` container was resumed and left running at
+`http://127.0.0.1:8088/` (container port 8080). The original state and
+credentials were preserved in `packaging/.local-run/bootstrap.env`; that file
+contains secrets and must be read only in a private terminal.
 
-The original state and credentials were preserved. Sign in using
-`HONE_OPERATOR_ACCOUNT` and `HONE_OPERATOR_PASSWORD` from
-`packaging/.local-run/bootstrap.env`; view that file only in a private terminal.
-The successful login used those saved credentials, not a generated replacement.
+This was **app-only preview acceptance**: no host broker mount, no real tenant
+provisioning, and no change to host accounts, root services, firewall or SELinux
+policy.
 
-This is **app-only preview acceptance**, not HoneNode 0.1.0 release acceptance.
-There is no host broker mount, no real tenant provisioning, and no change to
-host accounts, root services, firewall, or SELinux policy.
-
-## Fresh checks
+## Evidence from that run
 
 | Check | Result |
 |---|---|
 | Offline, locked musl release build of `honenode` and `honed` | Passed; existing artifacts up to date |
 | Static ELF linkage | No `INTERP` or `DT_NEEDED`; actual app execution also passed |
 | OCI archive descriptors | Manifest/config/layer sizes and SHA-256 digests verified |
-| Archive contents | App binary equals current release artifact; complete static tree equals source |
-| Loaded image | Image ID equals verified archive config digest |
-| Rust workspace tests | 60 broker + 36 app passed |
-| Packaging Python tests | 40 passed |
-| Fedora lab Python tests | 18 passed; mocked/sandbox checks, not host installation |
-| App SQL/theme Python tests | 16 SQL + 9 theme passed |
-| Isolated Playwright workflow | Passed with simulated broker |
-| Real OCI Playwright smoke | Passed using saved bootstrap |
-| Real preview restart | Existing authenticated session, database inode and bootstrap preserved |
+| Loaded image | Image ID equals the verified archive config digest |
+| Rust workspace tests | 60 broker + 36 app passed (historical counts) |
+| Packaging Python tests | 40 passed (historical count) |
+| App SQL/theme Python tests | 16 SQL + 9 theme passed (historical counts) |
+| Isolated Playwright workflow | Passed with a simulated broker |
+| Real OCI Playwright smoke | Passed using the saved bootstrap |
+| Real preview restart | Authenticated session, database inode and bootstrap preserved |
 | Repeated health checks | 100 requests in batches of 10 passed |
 | SQLite `PRAGMA quick_check` after restart | `ok`; one operator, no tenants |
 
-The SQL regression suite initially failed during import because it extracted
-an INSERT from `create_service`, which now delegates to `reserve_service`.
-`backend/crates/honenode/tests/test_registry_sql.py` now uses the production
-reservation query and its 16 bindings. Coverage includes cross-plan quotas,
-failed reservations, tombstones, tenant isolation, concurrent writers, and
-retained port/volume reservations. No production code was changed in this
-resumption. The release build still reports 15 existing app dead-code warnings.
-
-### Real-container evidence
-
-- Local rootless Podman; numeric app user `65532:65532`.
-- Read-only root filesystem, no privileged mode or host networking,
-  `no-new-privileges`, and launch-time `--cap-drop ALL`.
-- Enforcing SELinux with a `container_t` process label; no `label=disable`.
-- 512 MiB memory/swap ceiling, one CPU, 256 PID ceiling.
-- Only the private preview data tree bind-mounted; no Podman or broker socket.
-- HTTP published only on `127.0.0.1:8088`.
-- Health, CSP, `nosniff`, unauthenticated operator denial, disabled API-token
-  endpoints, saved-credential login, all tested operator routes, and CSS passed.
-- Resource snapshot after restart: about 1.7 MiB of 512 MiB memory, seven PIDs.
-  This is a point-in-time observation, not a sustained-load benchmark.
-
-### Isolated workflow evidence
-
-`packaging/tests/browser_smoke.cjs` launched the real static app as a temporary
-native process on port 18089 with a simulated broker. It checked neutral
-operator pages, SharpNode tenant pages, operator-created tenant login,
-catalogue provisioning of web and database services, stop/start, exhausted
-quota UI, tenant denial from the operator surface, and mobile viewport bounds.
-Screenshots were regenerated under `packaging/.local-run/screenshots/`.
-They depict fixture services, not running host containers.
+Real-container observations at the time: rootless Podman, numeric `65532:65532`,
+read-only root filesystem, no privileged mode or host networking,
+`no-new-privileges`, `--cap-drop ALL`, enforcing SELinux (`container_t`), no
+`label=disable`, 512 MiB memory/swap, one CPU, 256 PID ceiling, only the private
+preview data tree bind-mounted, and HTTP published only on `127.0.0.1:8088`.
 
 ## Reproduce
 
-Run from the repository root. The toolchain and browser paths below refer to
-this workstation's already installed local build tools; no download is needed.
+Run from the repository root with the local toolchain and Playwright
+installation you already have:
 
 ```sh
-env PATH=/home/cos/Documents/DD5/backend/.build-tools/cargo/bin:/usr/bin:/bin \
-  CARGO_HOME=/home/cos/Documents/DD5/backend/.build-tools/cargo \
-  RUSTUP_HOME=/home/cos/Documents/DD5/backend/.build-tools/rustup \
-  cargo test --manifest-path backend/Cargo.toml --workspace --offline --locked
+cargo test --manifest-path backend/Cargo.toml --all-targets --all-features
+python3 -m unittest discover -s packaging/tests -v
+python3 -m unittest discover -s backend/crates/honenode/tests -v
 
-python3 -B -m unittest discover -s packaging/tests -v
-python3 -B -m unittest discover -s packaging/fedora/tests -v
-python3 -B -m unittest discover -s backend/crates/honenode/tests -v
-
+# Optional browser checks; require Playwright and a running preview.
 PLAYWRIGHT_BROWSERS_PATH=backend/.build-tools/browser-cache \
   node packaging/tests/browser_smoke.cjs
-
-# Requires the existing running app-only preview. Explicitly restarts it.
 PLAYWRIGHT_BROWSERS_PATH=backend/.build-tools/browser-cache \
   node packaging/tests/preview_smoke.cjs --restart
 ```
 
-Static build command used successfully:
+Build the static archive with `packaging/oci/build_archive.py` as documented in
+`README.md`; Askama templates are embedded, so future source changes require a
+rebuild.
 
-```sh
-env PATH=/home/cos/Documents/DD5/backend/.build-tools/musl/bin:/usr/bin:/bin \
-  CARGO_HOME=/home/cos/Documents/DD5/backend/.build-tools/cargo \
-  RUSTUP_HOME=/home/cos/Documents/DD5/backend/.build-tools/rustup \
-  CC_x86_64_unknown_linux_musl=/home/cos/Documents/DD5/backend/.build-tools/musl/bin/musl-gcc \
-  CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=/home/cos/Documents/DD5/backend/.build-tools/rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld \
-  backend/.build-tools/cargo/bin/cargo build --manifest-path backend/Cargo.toml \
-  --release --locked --offline --target x86_64-unknown-linux-musl -p honenode -p honed
-```
-
-The archive did not need rebuilding: its embedded app and static assets exactly
-match those current artifacts. Use the builder in `README.md` after future
-source changes; Askama templates are embedded and require recompilation.
-
-## Artifact identity
+## Artifact identity (that historical run only)
 
 ```text
 App binary SHA-256:
@@ -116,15 +71,17 @@ OCI config / loaded image SHA-256:
 6a7dd3e4c59ea1f3e7f68ff2ecd92b4453e3ccba8bb9b34be16fac1966471bdb
 ```
 
-## Still outside this result
+These are not release hashes and must not be used to verify a published 0.8.8
+asset.
 
-- Real app-to-host broker access, reviewed socket DAC/SELinux integration,
-  rootless tenant managers and actual web/database service acceptance.
-- Storage/Git provisioning: the broker currently offers web/database only;
-  app fixture tests for additional kinds do not establish broker support.
-- Production setup/credential rotation, TLS/listener separation, policy and
-  capacity review, disk quotas, RPM installation/upgrade, signatures/SBOM,
-  and long-duration or realistic-load testing.
+## Still outside the preview result
 
-Use `packaging/fedora/README.md` for the separate administrative host-lab path.
-Do not infer that a successful preview authorizes or completes that deployment.
+- A one-command host installation (broker unit, policy, socket group, tenants).
+- Reviewed SELinux policy for broker/app/socket integration.
+- A Fedora full smoke on GitHub (the Rocky full smoke is the current E2E).
+- Signed artifacts, SBOM/provenance and a digest-pinned build base image.
+- Sustained-load, upgrade/uninstall and credential-rotation testing.
+
+The Fedora lab wizard and its material live in the SharpNode host repository,
+outside this app source tree. Do not infer that a successful preview authorizes
+or completes a host deployment.

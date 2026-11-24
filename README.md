@@ -31,7 +31,7 @@ source, its packaging and the CI/security pipeline.
 ## Build and test
 
 ```sh
-cargo build --release --manifest-path backend/Cargo.toml
+cargo build --release --locked --manifest-path backend/Cargo.toml
 cargo test --manifest-path backend/Cargo.toml
 python3 -m unittest discover -s backend/crates/honenode/tests
 python3 -m unittest discover -s packaging/tests
@@ -50,12 +50,14 @@ Do not install the Fedora bundle on Rocky or vice versa.
 ## CI and security
 
 - `CI` (`ci.yml`): Rust format/clippy/tests, Python tests, Cargo Audit, Cargo
-  Deny, Semgrep SAST, Trivy filesystem analysis, Gitleaks, OSV-Scanner,
+  Deny, Semgrep SAST, Trivy filesystem and image analysis, Betterleaks, OSV-Scanner,
   ShellCheck, Hadolint, Actionlint, ZAP baseline DAST, and advisory OpenSCAP
   and Lynis scans. Findings are uploaded as SARIF where the tool supports it.
 - The STRIDE model and the threat-to-tool mapping are in `security/`.
-- Host-wide OpenSCAP/Lynis and the nested Rocky smoke are advisory on GitHub:
-  the runner is not the target host, and nested systemd/Podman is best effort.
+- Host-wide OpenSCAP/Lynis and the full nested Rocky smoke are advisory on
+  GitHub: the runner is not the target host, and nested systemd/Podman is best
+  effort. The blocking Rocky job compiles the release binaries, and the smoke
+  consumes those binaries with `--prebuilt` rather than recompiling.
 
 ## Release
 

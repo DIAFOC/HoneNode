@@ -14,15 +14,16 @@ Fedora. Use the Fedora bundle there.
 
 ## Host installation
 
-The experimental RPM remains the host packaging path:
+This bundle ships the broker binary (`broker/honed`), the app binary
+(`native/honenode`), and example units/policy/environment under `examples/`.
+It does **not** install a systemd unit, a policy, tenants, or SELinux labels.
+The experimental RPM in the source tree is a separate prototype and is not an
+asset of this bundle.
 
-```sh
-sudo rpm -i honed-<version>-<release>.x86_64.rpm
-```
-
-The RPM installs only the broker and its systemd unit. It does not install,
-enable, or start the app, and it installs no tenant allowlist or active policy.
-Host integration and SELinux readiness remain operator tasks.
+For an evaluation host, review `examples/systemd/`, `examples/policy.example.json`
+and `examples/app.env.example`, install the broker unit and policy as the root
+operator, then start the app from the extracted `native/` directory. Host
+integration and SELinux readiness remain operator tasks.
 
 ## Evaluation smoke
 
@@ -33,14 +34,24 @@ real broker/app path:
 bash packaging/rocky/run_smoke_podman.sh
 ```
 
-The smoke provisions the fixed nginx template, writes site content through the
-panel, provisions a second nginx and a second PostgreSQL, and re-provisions the
-web service after deletion. It also runs the full signup/key/redemption flow.
+After building this bundle, test the released binaries instead of a source
+rebuild:
+
+```sh
+bash packaging/os/rocky/build.sh
+bash packaging/rocky/run_smoke_podman.sh --prebuilt
+```
+
+The CI workflow builds the Rocky binaries once, uploads them, and runs the full
+smoke with `--prebuilt`. The smoke provisions the fixed nginx template, writes
+site content through the panel, provisions a second nginx and a second
+PostgreSQL, and re-provisions the web service after deletion. It also runs the
+full signup/key/redemption flow.
 
 ## Verification
 
 ```sh
-python3.14 -m unittest discover -s packaging/tests
+python3 -m unittest discover -s packaging/tests
 ```
 
 The Rocky container installs Rust and builds from source, so the smoke tests

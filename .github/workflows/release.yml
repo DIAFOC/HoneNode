@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  security-events: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -38,12 +39,12 @@ jobs:
     env:
       BUNDLE_VERSION: ${{ needs.version.outputs.value }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Fedora-tagged bundle
         run: |
           dnf -y install cargo rust gcc make python3
           bash packaging/os/fedora/build.sh --skip-tests
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fedora-bundle
           path: packaging/os/dist/*.tar.gz
@@ -59,12 +60,12 @@ jobs:
     env:
       BUNDLE_VERSION: ${{ needs.version.outputs.value }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Rocky-tagged bundle
         run: |
           dnf -y install gcc make python3
           bash packaging/os/rocky/build.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rocky-bundle
           path: packaging/os/dist/*.tar.gz
@@ -77,9 +78,9 @@ jobs:
     env:
       VERSION: ${{ needs.version.outputs.value }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: backend
           file: backend/Containerfile
@@ -87,9 +88,26 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Trivy release image scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: honenode-app:${{ env.VERSION }}
+          format: sarif
+          output: trivy-release-image.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          version: v0.76.2
+      - name: Upload Trivy release image SARIF
+        if: always() && hashFiles('trivy-release-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-release-image.sarif
+          category: trivy-release-image
       - name: Save image
         run: docker save "honenode-app:${VERSION}" -o "honenode-app-${VERSION}.tar"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: app-image
           path: honenode-app-*.tar
@@ -104,7 +122,7 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.version.outputs.value }}
           name: HoneNode ${{ needs.version.outputs.value }}

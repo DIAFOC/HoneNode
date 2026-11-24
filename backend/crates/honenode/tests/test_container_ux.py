@@ -47,13 +47,27 @@ function setup(value, crypto = webcrypto, maxLength = 16384, present = true) {
       assert.equal(type, "click"); this.click = fn;
     } },
     environment: { value, maxLength },
-    "secret-status": { textContent: "" }
+    "secret-status": { textContent: "" },
+    "database_password": { value: "" },
+    "database-password-status": { textContent: "" }
   };
+  const generators = [{
+    dataset: { generatePassword: "database_password", statusTarget: "database-password-status" },
+    hidden: true,
+    disabled: false,
+    addEventListener(type, fn) { assert.equal(type, "click"); this.click = fn; }
+  }];
   vm.runInNewContext(script, { crypto, document: {
-    getElementById(id) { return present ? elements[id] : null; }
+    getElementById(id) { return present ? elements[id] : null; },
+    querySelectorAll(selector) {
+      assert.equal(selector, "[data-generate-password]");
+      return present ? generators : [];
+    }
   } });
   return { button: elements["generate-secrets"], env: elements.environment,
-           status: elements["secret-status"] };
+           status: elements["secret-status"], generator: generators[0],
+           database: elements["database_password"],
+           databaseStatus: elements["database-password-status"] };
 }
 setup("", webcrypto, 16384, false); // Other pages are unaffected.
 const original = "APP_SECRET=GENERATE\nPASSWORD=GENERATE\nNONCE=GENERATE\nFORGEJO__security__SECRET=REEMPLAZA_CON_UN_SECRETO_ALEATORIO\nAPP_MODE=GENERATE\nAPP_PASSWORD=keep-this\nROOT_URL=http://127.0.0.1:30000/";
@@ -83,6 +97,11 @@ assert.equal(tooLong.env.value, "APP_SECRET=GENERATE");
 const crlf = setup("PASSWORD=GENERATE\r\nNONCE=GENERATE");
 crlf.button.click();
 assert.match(crlf.env.value, /^PASSWORD=[0-9a-f]{32}\nNONCE=[0-9a-f]{32}$/);
+const database = setup("");
+assert.equal(database.generator.hidden, false);
+database.generator.click();
+assert.match(database.database.value, /^[0-9a-f]{32}$/);
+assert.match(database.databaseStatus.textContent, /generada/);
 '''.replace("const script = SCRIPT;", "const script = " + json.dumps(SCRIPT.read_text()) + ";")
         result = subprocess.run(["node", "-e", harness], capture_output=True,
                                 text=True, timeout=15)

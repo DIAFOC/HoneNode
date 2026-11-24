@@ -25,7 +25,7 @@ jobs:
     name: Rust format, lints and tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -50,12 +50,12 @@ jobs:
     name: Python tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend -> target
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
       - name: Release binaries for packaging tests
@@ -69,21 +69,23 @@ jobs:
     name: Security analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
       # Ignored advisories:
-      # - RUSTSEC-2026-0459: sqlx 0.8 pins libsqlite3-sys 0.30; the fix needs
-      #   Rust 1.94, which the Rocky 10 bundle toolchain does not provide.
+      # - RUSTSEC-2026-0459: sqlx 0.9.1 still pins libsqlite3-sys 0.30.1; the
+      #   fix waits on upstream adoption of 0.39. Exposure needs a crafted
+      #   registry DB+WAL pair that tenants cannot write.
       # - RUSTSEC-2023-0071: rsa is reachable only through sqlx-mysql, an
       #   optional dependency that this workspace does not compile.
       - name: Cargo Audit
         run: |
+          set -euo pipefail
           curl -sSfL "https://github.com/rustsec/rustsec/releases/download/cargo-audit/v0.23.0/cargo-audit-x86_64-unknown-linux-gnu-v0.23.0.tgz" \
             | tar -xz -C /tmp
           /tmp/cargo-audit-x86_64-unknown-linux-gnu-v0.23.0/cargo-audit audit \
@@ -136,6 +138,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
+          version: v0.76.2
           skip-files: 'backend/crates/honenode/src/tests.rs,backend/crates/honenode/src/observation_tests.rs,backend/crates/honenode/src/portal_service_tests.rs,backend/crates/honenode/src/provisioning_tests.rs,backend/crates/honenode/tests/*,packaging/tests/*,backend/crates/honenode/SIGNUP_BILLING.md,security/HoneNode_Threat_Model_STRIDE.json'
       - name: Upload Trivy SARIF
         if: always()
@@ -150,12 +153,14 @@ jobs:
       - name: Betterleaks secrets scan
         if: always()
         run: |
-          curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/betterleaks_1.10.1_linux_x64.tar.gz" \
-            -o /tmp/betterleaks.tar.gz
+          set -euo pipefail
+          asset=betterleaks_1.10.1_linux_x64.tar.gz
+          curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/${asset}" \
+            -o "/tmp/${asset}"
           curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/checksums.txt" \
             -o /tmp/betterleaks-checksums.txt
-          (cd /tmp && grep " betterleaks_1.10.1_linux_x64.tar.gz$" betterleaks-checksums.txt | sha256sum -c -)
-          tar -xzf /tmp/betterleaks.tar.gz -C /tmp
+          (cd /tmp && grep " ${asset}$" betterleaks-checksums.txt | sha256sum -c -)
+          tar -xzf "/tmp/${asset}" -C /tmp
           /tmp/betterleaks git . \
             --config .betterleaks.toml \
             --report-format sarif \
@@ -213,10 +218,10 @@ jobs:
     name: ZAP baseline DAST
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - name: Build app image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           file: backend/Containerfile
@@ -235,6 +240,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
+          version: v0.76.2
       - name: Upload Trivy image SARIF
         if: always() && hashFiles('trivy-image.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
@@ -269,7 +275,7 @@ jobs:
               -r zap-report.html -J zap-report.json -w zap-report.md
       - name: Upload ZAP report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: zap-baseline-report
           path: zap/
@@ -288,7 +294,7 @@ jobs:
       image: quay.io/rockylinux/rockylinux:10
       options: --user root
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: dnf -y install openscap-scanner scap-security-guide
       - name: Evaluate CIS profile
         run: |
@@ -300,7 +306,7 @@ jobs:
             --results /tmp/oscap-results.xml \
             --report /tmp/oscap-report.html \
             "$profile" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: openscap-report
@@ -316,11 +322,11 @@ jobs:
       image: quay.io/rockylinux/rockylinux:10
       options: --user root
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: dnf -y install epel-release || true
       - run: dnf -y install lynis
       - run: lynis audit system --quick --no-colors > /tmp/lynis.log 2>&1 || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lynis-report
@@ -336,9 +342,17 @@ jobs:
     env:
       HONENODE_REPO: ${{ github.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build with Rocky's toolchain
         run: bash packaging/rocky/smoke.sh --build-only
+      - name: Upload Rocky binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: rocky-native-binaries
+          path: |
+            packaging/os/dist/rocky/honed
+            packaging/os/dist/rocky/honenode
+          if-no-files-found: error
 
   # The full smoke needs systemd as PID 1 and a privileged rootless-Podman
   # nest. Booting Rocky through Podman on the runner VM is what works; running
@@ -346,15 +360,31 @@ jobs:
   # because GitHub's nested namespaces are the flaky part, not the product.
   smoke-rocky:
     name: Rocky 10 full smoke (advisory)
+    needs: rocky-build
     runs-on: ubuntu-latest
     timeout-minutes: 60
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - name: Download Rocky binaries
+        uses: actions/download-artifact@v8
+        with:
+          name: rocky-native-binaries
+          path: packaging/os/dist/rocky
       - name: Install Podman
         run: |
+          chmod +x packaging/os/dist/rocky/honed packaging/os/dist/rocky/honenode
           sudo apt-get update
           sudo apt-get install -y podman passt uidmap fuse-overlayfs slirp4netns
           podman --version
-      - name: Run Rocky smoke
-        run: bash packaging/rocky/run_smoke_podman.sh
+      - name: Run Rocky smoke against the built binaries
+        run: |
+          set -o pipefail
+          sudo bash packaging/rocky/run_smoke_podman.sh --prebuilt 2>&1 | tee /tmp/rocky-smoke.log
+      - name: Upload Rocky smoke log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rocky-smoke-log
+          path: /tmp/rocky-smoke.log
+          if-no-files-found: warn

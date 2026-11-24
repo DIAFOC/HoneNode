@@ -62,7 +62,8 @@
       <div class="field">
         <label for="file_manager_password">Contraseña inicial</label>
         <input id="file_manager_password" name="file_manager_password" type="password" required minlength="12" maxlength="72" autocomplete="new-password">
-        <p class="hint">Entre 12 y 72 bytes, sin caracteres de control. Se envía una sola vez al agente del host: no se guarda en el panel ni aparece en trabajos, auditoría o registros. No hay contraseña por defecto.</p>
+        <button type="button" class="button" id="generate-file-manager-password" data-generate-password="file_manager_password" data-status-target="file-manager-password-status" hidden>Generar</button>
+        <p class="hint" id="file-manager-password-status">Entre 12 y 72 bytes, sin caracteres de control. Se envía una sola vez al agente del host: no se guarda en el panel ni aparece en trabajos, auditoría o registros. No hay contraseña por defecto.</p>
       </div>
       <div class="field check-field">
         <label for="file_manager_read_only">
@@ -72,6 +73,20 @@
         <p class="hint">Podrás cambiarlo más tarde desde la pestaña Configuración, con el servicio detenido.</p>
       </div>
       <p class="hint">El servicio se administra desde su propia aplicación: archivos y usuarios se gestionan en File Browser. El panel no ofrece shell, no ejecuta comandos y no embebe la aplicación.</p>
+      {% else if is_database %}
+      <div class="field">
+        <label for="database_password">Contraseña inicial de PostgreSQL</label>
+        <input id="database_password" name="database_password" type="password" required minlength="12" maxlength="72" autocomplete="new-password">
+        <button type="button" class="button" id="generate-database-password" data-generate-password="database_password" data-status-target="database-password-status" hidden>Generar</button>
+        <p class="hint" id="database-password-status">Entre 12 y 72 bytes, sin caracteres de control. Se envía una sola vez al agente del host: no se guarda en el panel ni aparece en trabajos, auditoría o registros.</p>
+      </div>
+      <dl class="meta">
+        <dt>Usuario</dt><dd class="mono">postgres</dd>
+        <dt>Base de datos</dt><dd class="mono">{{ database_name }}</dd>
+      </dl>
+      <p class="hint">La contraseña se aplica al crear la unidad. Si el servicio ya existe, el broker conserva la credencial anterior. PostgreSQL se publica solo en loopback del host; para acceso remoto necesitas un túnel SSH o un proxy autenticado, nunca exponer el puerto directamente.</p>
+      {% else if is_git %}
+      <p class="hint">Forgejo no usa credenciales del panel: el primer usuario que se registre en esta instancia será su administrador. Es estado de la instancia, no del broker; cada instancia tiene su propio primer usuario. Si la expones fuera del loopback, crea el administrador y desactiva el registro abierto.</p>
       {% else %}
       <p>Esta imagen no necesita credenciales iniciales desde el panel. El servicio se crea con los valores de la política autorizada.</p>
       {% endif %}

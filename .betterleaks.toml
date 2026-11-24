@@ -25,4 +25,5 @@ regexes = [
   '''unique-secret-value''',
   '''supersecretvalue''',
   '''secret-wire-value''',
+  '''"password": "short"''',
 ]

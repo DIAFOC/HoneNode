@@ -30,8 +30,8 @@ cargo build --release --manifest-path backend/Cargo.toml -p honed -p honenode
 
 if [[ "$SKIP_TESTS" == 0 ]]; then
   cargo test --manifest-path backend/Cargo.toml
-  python3.14 -m unittest discover -s backend/crates/honenode/tests
-  python3.14 -m unittest discover -s packaging/tests
+  python3 -m unittest discover -s backend/crates/honenode/tests
+  python3 -m unittest discover -s packaging/tests
 fi
 
 mkdir -p packaging/os/dist

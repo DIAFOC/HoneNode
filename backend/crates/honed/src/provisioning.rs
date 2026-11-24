@@ -80,6 +80,7 @@ pub fn setup_service(
     slug: &str,
     kind: ServiceKind,
     instance: u32,
+    database_password: Option<&str>,
 ) -> Result<(), String> {
     if kind == ServiceKind::Container {
         return Err("use container.create".to_string());
@@ -109,14 +110,7 @@ pub fn setup_service(
         ServiceKind::Database => {
             ensure_secret_parent(config)?;
             let path = secret_path(config, slug, "db", instance);
-            ensure_secret_file(
-                &path,
-                || {
-                    let password = random_hex(32)?;
-                    Ok(database_environment(slug, &password))
-                },
-                gid,
-            )?;
+            ensure_secret_file(&path, || database_body(slug, database_password), gid)?;
             Ok(())
         }
         ServiceKind::Git => {
@@ -467,6 +461,17 @@ fn database_environment(slug: &str, password: &str) -> String {
     format!("POSTGRES_USER=postgres\nPOSTGRES_DB={slug}\nPOSTGRES_PASSWORD={password}\n")
 }
 
+fn database_body(slug: &str, password: Option<&str>) -> Result<String, String> {
+    let password = match password {
+        Some(password) if password.is_empty() => {
+            return Err("database password must not be empty".to_string())
+        }
+        Some(password) => password.to_string(),
+        None => random_hex(32)?,
+    };
+    Ok(database_environment(slug, &password))
+}
+
 fn forgejo_environment(secret_key: &str, internal_token: &str) -> String {
     format!(
         "FORGEJO__security__SECRET_KEY={secret_key}\nFORGEJO__security__INTERNAL_TOKEN={internal_token}\n"
@@ -593,6 +598,23 @@ mod tests {
     }
 
     #[test]
+    fn database_body_prefers_the_tenant_password_and_falls_back_to_a_generated_one() {
+        let chosen = database_body("t01", Some("chosen database password")).unwrap();
+        assert_eq!(
+            chosen,
+            "POSTGRES_USER=postgres\nPOSTGRES_DB=t01\nPOSTGRES_PASSWORD=chosen database password\n"
+        );
+        let generated = database_body("t01", None).unwrap();
+        let password = generated
+            .lines()
+            .find_map(|line| line.strip_prefix("POSTGRES_PASSWORD="))
+            .unwrap();
+        assert_eq!(password.len(), 64);
+        assert!(password.bytes().all(|byte| byte.is_ascii_hexdigit()));
+        assert!(database_body("t01", Some("")).is_err());
+    }
+
+    #[test]
     fn legacy_directories_reject_existing_symlink_leaves_without_touching_targets() {
         let fixture = Fixture::new();
         let root_path = fixture.0.join("root");
@@ -649,7 +671,7 @@ mod tests {
     #[test]
     fn generic_containers_fail_before_account_lookup_or_unit_success() {
         let error =
-            setup_service(&Config::from_env(), "t01", ServiceKind::Container, 1).unwrap_err();
+            setup_service(&Config::from_env(), "t01", ServiceKind::Container, 1, None).unwrap_err();
         assert!(error.contains("container.create"));
         assert!(validate_service(&Config::from_env(), "t01", ServiceKind::Container, 1).is_err());
     }

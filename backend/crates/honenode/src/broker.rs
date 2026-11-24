@@ -604,6 +604,7 @@ mod tests {
                 password: crate::service_options::Secret::new("correct horse battery"),
                 read_only: true,
             }),
+            database: None,
         };
         let provision = Request::LimitsSet {
             tenant_id: "t01".to_string(),
@@ -619,6 +620,28 @@ mod tests {
         assert_eq!(wire["options"]["file_manager"]["read_only"], true);
         let debug = format!("{provision:?}");
         assert!(debug.contains("REDACTED") && !debug.contains("correct horse"));
+
+        let database = Request::LimitsSet {
+            tenant_id: "t01".to_string(),
+            service: "t01-db".to_string(),
+            kind: "database".to_string(),
+            plan_code: "pro".to_string(),
+            options: Some(ServiceOptions {
+                image: Some("docker.io/library/postgres:17-alpine".to_string()),
+                file_manager: None,
+                database: Some(crate::service_options::DatabaseOptions {
+                    password: crate::service_options::Secret::new("tenant database password"),
+                }),
+            }),
+            port: Some(15431),
+        };
+        let wire = serde_json::to_value(&database).unwrap();
+        assert_eq!(
+            wire["options"]["database"]["password"],
+            "tenant database password"
+        );
+        let debug = format!("{database:?}");
+        assert!(debug.contains("REDACTED") && !debug.contains("tenant database password"));
 
         let inspect = Request::ServiceInspect {
             tenant_id: "t01".to_string(),

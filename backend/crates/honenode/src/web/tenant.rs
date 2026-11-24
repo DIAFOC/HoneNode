@@ -15,7 +15,9 @@ use crate::images::ImageReference;
 use crate::models::{JobState, Service, ServiceKind, ServiceState, Tenant, TenantStatus};
 use crate::portal_catalog::CatalogEntry;
 use crate::registry;
-use crate::service_options::{self, FileManagerOptions, Secret, ServiceConfiguration, ServiceOptions};
+use crate::service_options::{
+    self, DatabaseOptions, FileManagerOptions, Secret, ServiceConfiguration, ServiceOptions,
+};
 use crate::state::AppState;
 use crate::topup;
 use crate::web::layout::{
@@ -44,6 +46,8 @@ pub struct ProvisionForm {
     pub file_manager_password: Option<Secret>,
     #[serde(default)]
     pub file_manager_read_only: Option<String>,
+    #[serde(default)]
+    pub database_password: Option<Secret>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -130,6 +134,9 @@ struct DeployTemplate {
     ports: Vec<KeyValue>,
     volumes: Vec<KeyValue>,
     is_storage: bool,
+    is_database: bool,
+    is_git: bool,
+    database_name: String,
     archived: bool,
     can_provision: bool,
     has_error: bool,
@@ -259,6 +266,10 @@ struct ServiceDetailTemplate {
     can_manage: bool,
     is_storage: bool,
     is_web: bool,
+    is_database: bool,
+    is_git: bool,
+    database_port: String,
+    database_name: String,
     tab: &'static str,
     csrf: String,
     events: Vec<layout::AuditRow>,
@@ -351,7 +362,8 @@ pub async fn provision(
     let read_only = service_options::checkbox(form.file_manager_read_only.as_deref())?;
     let wizard = form.image.is_some()
         || form.file_manager_username.is_some()
-        || form.file_manager_password.is_some();
+        || form.file_manager_password.is_some()
+        || form.database_password.is_some();
     let username = form.file_manager_username.clone().unwrap_or_default();
     let file_manager = match (form.file_manager_username, form.file_manager_password) {
         (Some(username), Some(password)) => Some(FileManagerOptions {
@@ -366,9 +378,11 @@ pub async fn provision(
             ))
         }
     };
+    let database = form.database_password.map(|password| DatabaseOptions { password });
     let options = wizard.then_some(ServiceOptions {
         image: form.image.clone(),
         file_manager,
+        database,
     });
     let result = crate::provisioning::provision_with_options(
         &state,
@@ -668,6 +682,15 @@ pub async fn service_detail(
 
     let public_url = layout::public_url(&state.config, &service);
     let has_public_url = public_url.is_some();
+    let database_port = if service.kind == ServiceKind::Database {
+        serde_json::from_str::<serde_json::Value>(&service.ports_json)
+            .ok()
+            .and_then(|ports| ports.get("database").and_then(|port| port.as_u64()))
+            .map(|port| port.to_string())
+            .unwrap_or_else(|| "—".to_string())
+    } else {
+        String::new()
+    };
     let event_rows = audit_rows(&events);
     let has_events = !event_rows.is_empty();
 
@@ -701,6 +724,10 @@ pub async fn service_detail(
         can_manage,
         is_storage: service.kind == ServiceKind::Storage,
         is_web: service.kind == ServiceKind::Web,
+        is_database: service.kind == ServiceKind::Database,
+        is_git: service.kind == ServiceKind::Git,
+        database_port,
+        database_name: tenant.slug.clone(),
         tab: "overview",
         csrf: principal.session.csrf_token.clone(),
         has_events,
@@ -1089,6 +1116,9 @@ async fn deploy_view(
         ports: key_values(&ports),
         volumes: key_values(&volumes),
         is_storage: kind == ServiceKind::Storage,
+        is_database: kind == ServiceKind::Database,
+        is_git: kind == ServiceKind::Git,
+        database_name: tenant.slug.clone(),
         archived: kind == ServiceKind::Storage,
         can_provision: entry.can_provision,
         has_error: error.is_some(),
@@ -1283,6 +1313,7 @@ pub async fn configure_service(
             password: Secret::new(""),
             read_only,
         }),
+        database: None,
     };
     let job = registry::create_job(
         &state.db,

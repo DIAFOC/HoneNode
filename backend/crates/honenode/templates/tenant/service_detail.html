@@ -47,6 +47,19 @@
         la consola mediada por el broker aún no está disponible.
       </p>
     {% endif %}
+    {% if is_database %}
+      <h3>Conexión PostgreSQL</h3>
+      <dl class="meta">
+        <dt>Host</dt><dd class="mono">127.0.0.1</dd>
+        <dt>Puerto</dt><dd class="mono">{{ database_port }}</dd>
+        <dt>Base de datos</dt><dd class="mono">{{ database_name }}</dd>
+        <dt>Usuario</dt><dd class="mono">postgres</dd>
+      </dl>
+      <p class="hint">Si creaste el servicio desde el asistente, la contraseña es la que elegiste; el panel no la guarda ni la vuelve a mostrar. Si la unidad se creó por la vía heredada o por el operador, la credencial la custodia el operador. La publicación es solo en loopback del host: para acceso remoto usa un túnel SSH o un proxy autenticado, nunca expongas el puerto directamente.</p>
+    {% endif %}
+    {% if is_git %}
+      <p class="hint">El primer usuario que se registre en esta instancia de Forgejo será su administrador. Es estado de la instancia, no del broker; cada instancia tiene su propio primer usuario. Si está expuesta fuera del loopback, crea el administrador y desactiva el registro abierto.</p>
+    {% endif %}
     <h3>Controles</h3>
     <ul>
       {% for control in controls %}<li>{{ control }}</li>{% endfor %}

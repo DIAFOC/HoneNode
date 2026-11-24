@@ -85,6 +85,8 @@ pub struct ServiceOptions {
     pub image: Option<String>,
     #[serde(default)]
     pub file_manager: Option<FileManagerOptions>,
+    #[serde(default)]
+    pub database: Option<DatabaseOptions>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,6 +96,12 @@ pub struct FileManagerOptions {
     pub password: Secret,
     #[serde(default)]
     pub read_only: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DatabaseOptions {
+    pub password: Secret,
 }
 
 /// Sanitized configuration returned by `limits.set`, `service.inspect`, and
@@ -173,6 +181,20 @@ pub fn validate_new_password(password: &Secret) -> Result<(), String> {
     Ok(())
 }
 
+pub fn validate_database_password(password: &Secret) -> Result<(), String> {
+    let value = password.expose();
+    if value.len() < PASSWORD_MIN
+        || value.len() > PASSWORD_MAX
+        || value.chars().any(char::is_control)
+    {
+        return Err(
+            "invalid options.database.password: expected 12-72 bytes without control characters"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
 /// Pure checks performed before any host lookup or mutation.
 pub fn validate_options(
     config: &Config,
@@ -197,23 +219,34 @@ pub fn validate_options(
             );
         }
     }
-    match (&options.file_manager, kind) {
-        (Some(_), kind) if kind != ServiceKind::Storage => Err(format!(
-            "options.file_manager is not accepted for {} services",
+    if options.database.is_some() && kind != ServiceKind::Database {
+        return Err(format!(
+            "options.database is not accepted for {} services",
             kind.as_str()
-        )),
+        ));
+    }
+    match (&options.file_manager, kind) {
+        (Some(_), kind) if kind != ServiceKind::Storage => {
+            return Err(format!(
+                "options.file_manager is not accepted for {} services",
+                kind.as_str()
+            ))
+        }
         (Some(file_manager), _) => {
             validate_username(&file_manager.username)?;
             if !file_manager.password.is_empty() {
                 validate_new_password(&file_manager.password)?;
             }
-            Ok(())
         }
         (None, _) if mode == WriteMode::Configure => {
-            Err("service.configure requires options.file_manager".to_string())
+            return Err("service.configure requires options.file_manager".to_string())
         }
-        (None, _) => Ok(()),
+        (None, _) => {}
     }
+    if let Some(database) = options.database.as_ref() {
+        validate_database_password(&database.password)?;
+    }
+    Ok(())
 }
 
 /// Decides the storage bootstrap from trusted host state. Reads only; the
@@ -752,6 +785,13 @@ mod tests {
         let debug = format!("{parsed:?}");
         assert!(debug.contains("REDACTED"));
         assert!(!debug.contains("correct horse"));
+        let database = options(serde_json::json!({
+            "image": "example/postgres:1",
+            "database": {"password": "correct horse battery"}
+        }));
+        let debug = format!("{database:?}");
+        assert!(debug.contains("REDACTED"));
+        assert!(!debug.contains("correct horse"));
         for bad in [
             serde_json::json!({"imagex": "a"}),
             serde_json::json!({"file_manager": {"username": "a", "password": "b", "admin": true}}),
@@ -807,6 +847,17 @@ mod tests {
         assert!(validate_options(&config, ServiceKind::Web, Some(&web), WriteMode::Provision).is_ok());
         assert!(validate_options(&config, ServiceKind::Web, None, WriteMode::Provision).is_ok());
         assert!(validate_options(&config, ServiceKind::Storage, None, WriteMode::Configure).is_err());
+        let database = options(serde_json::json!({
+            "image": "example/postgres:1",
+            "database": {"password": "correct horse battery"}
+        }));
+        assert!(validate_options(&config, ServiceKind::Database, Some(&database), WriteMode::Provision).is_ok());
+        assert!(validate_options(&config, ServiceKind::Web, Some(&database), WriteMode::Provision).is_err());
+        assert!(validate_options(&config, ServiceKind::Storage, Some(&database), WriteMode::Provision).is_err());
+        let short = options(serde_json::json!({
+            "database": {"password": "short"}
+        }));
+        assert!(validate_options(&config, ServiceKind::Database, Some(&short), WriteMode::Provision).is_err());
         let bad_user = options(serde_json::json!({
             "file_manager": {"username": "bad user", "password": ""}
         }));

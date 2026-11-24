@@ -61,6 +61,8 @@ pub struct ServiceOptions {
     pub image: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_manager: Option<FileManagerOptions>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub database: Option<DatabaseOptions>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -70,6 +72,12 @@ pub struct FileManagerOptions {
     pub password: Secret,
     #[serde(default)]
     pub read_only: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DatabaseOptions {
+    pub password: Secret,
 }
 
 impl ServiceOptions {
@@ -84,6 +92,7 @@ impl ServiceOptions {
                     "read_only": file_manager.read_only,
                 })
             }),
+            "database": self.database.is_some(),
         })
     }
 }
@@ -152,15 +161,22 @@ pub fn validate_username(value: &str) -> AppResult<()> {
 }
 
 pub fn validate_new_password(password: &Secret) -> AppResult<()> {
+    validate_password_bounds(password, "la contraseña del gestor de archivos")
+}
+
+pub fn validate_database_password(password: &Secret) -> AppResult<()> {
+    validate_password_bounds(password, "la contraseña de PostgreSQL")
+}
+
+fn validate_password_bounds(password: &Secret, label: &str) -> AppResult<()> {
     let value = password.expose();
     if value.len() < PASSWORD_MIN
         || value.len() > PASSWORD_MAX
         || value.chars().any(char::is_control)
     {
-        return Err(AppError::BadRequest(
-            "la contraseña del gestor de archivos debe tener entre 12 y 72 bytes, sin caracteres de control"
-                .to_string(),
-        ));
+        return Err(AppError::BadRequest(format!(
+            "{label} debe tener entre 12 y 72 bytes, sin caracteres de control"
+        )));
     }
     Ok(())
 }
@@ -189,6 +205,7 @@ mod tests {
                 password: Secret::new("correct horse battery"),
                 read_only: true,
             }),
+            database: None,
         }
     }
 
@@ -209,6 +226,24 @@ mod tests {
         assert_eq!(wire["file_manager"]["password"], "correct horse battery");
         assert_eq!(wire["file_manager"]["read_only"], true);
         assert!(ServiceOptions::default().audit_summary()["file_manager"].is_null());
+        let database = ServiceOptions {
+            image: Some("docker.io/library/postgres:17-alpine".to_string()),
+            file_manager: None,
+            database: Some(DatabaseOptions {
+                password: Secret::new("database fixture password"),
+            }),
+        };
+        let debug = format!("{database:?}");
+        assert!(debug.contains("REDACTED"));
+        assert!(!debug.contains("database fixture password"));
+        let summary = database.audit_summary();
+        assert_eq!(summary["database"], true);
+        let wire = serde_json::to_value(&database).unwrap();
+        assert_eq!(
+            wire["database"]["password"],
+            "database fixture password"
+        );
+        assert!(!summary.to_string().contains("database fixture password"));
     }
 
     #[test]
@@ -221,6 +256,10 @@ mod tests {
             "username": "alice", "password": "x", "shell": "/bin/sh"
         }))
         .is_err());
+        assert!(serde_json::from_value::<DatabaseOptions>(serde_json::json!({
+            "password": "x", "username": "postgres"
+        }))
+        .is_err());
         for valid in ["a", "alice", "a_b-c.d", &"x".repeat(32)] {
             assert!(validate_username(valid).is_ok(), "{valid}");
         }
@@ -228,7 +267,8 @@ mod tests {
             assert!(validate_username(invalid).is_err(), "{invalid:?}");
         }
         for valid in ["x".repeat(12), "x".repeat(72), "áéíóú contraseña".to_string()] {
-            assert!(validate_new_password(&Secret::new(valid)).is_ok());
+            assert!(validate_new_password(&Secret::new(valid.clone())).is_ok());
+            assert!(validate_database_password(&Secret::new(valid)).is_ok());
         }
         for invalid in [
             "x".repeat(11),
@@ -236,7 +276,8 @@ mod tests {
             "twelve chars\n".to_string(),
             "twelve chars\u{7}".to_string(),
         ] {
-            assert!(validate_new_password(&Secret::new(invalid)).is_err());
+            assert!(validate_new_password(&Secret::new(invalid.clone())).is_err());
+            assert!(validate_database_password(&Secret::new(invalid)).is_err());
         }
         // The bound is bytes, not chars: 36 two-byte characters exceed 72 bytes.
         assert!(validate_new_password(&Secret::new("á".repeat(36))).is_ok());
