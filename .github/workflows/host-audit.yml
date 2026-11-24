@@ -1,0 +1,76 @@
+name: Host audit (report-only)
+
+# These are container tool smokes, not host compliance gates. They are kept out
+# of the per-push CI on purpose. For a real host audit, run this workflow on a
+# self-hosted Rocky runner or execute the same commands on the target host.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  openscap:
+    name: OpenSCAP container smoke (report-only)
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/rockylinux/rockylinux:10
+      options: --user root
+    steps:
+      - uses: actions/checkout@v7
+      - run: dnf -y install openscap-scanner scap-security-guide
+      - name: Evaluate CIS profile
+        run: |
+          # The SSG stream has no container profile: bootloader, kernel, service
+          # and partitioning rules are correctly notapplicable in a container.
+          profile=$(find /usr/share/xml/scap/ssg/content \
+            \( -name 'ssg-rl10-ds.xml' -o -name 'ssg-rhel10-ds.xml' -o -name 'ssg-rhel9-ds.xml' \) \
+            | head -1)
+          test -n "$profile"
+          oscap xccdf eval --profile cis \
+            --results /tmp/oscap-results.xml \
+            --report /tmp/oscap-report.html \
+            "$profile" || true
+          {
+            echo "datastream=$profile"
+            echo "profile=cis (host-oriented; container rules are notapplicable)"
+            echo "note: a bare container has no bootloader, kernel or host services,"
+            echo "so many selected rules are expected to be notapplicable."
+            echo "result counts:"
+            grep -o '<result>[^<]*' /tmp/oscap-results.xml | sed 's/.*>//' | sort | uniq -c || true
+          } | tee /tmp/oscap-summary.txt | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: openscap-report
+          path: |
+            /tmp/oscap-results.xml
+            /tmp/oscap-report.html
+            /tmp/oscap-summary.txt
+
+  lynis:
+    name: Lynis container smoke (report-only)
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/rockylinux/rockylinux:10
+      options: --user root
+    steps:
+      - uses: actions/checkout@v7
+      - run: dnf -y install epel-release || true
+      - run: dnf -y install lynis
+      - run: lynis audit system --quick --no-colors > /tmp/lynis.log 2>&1 || true
+      - name: Lynis summary
+        if: always()
+        run: |
+          {
+            echo '### Lynis container smoke'
+            grep -E 'Hardening index|Tests performed' /tmp/lynis.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: lynis-report
+          path: /tmp/lynis.log

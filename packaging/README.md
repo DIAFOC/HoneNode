@@ -1,22 +1,23 @@
 # HoneNode packaging
 
-This directory builds the **evaluation artifacts**. It is not a whole-product
-installer, and `packaging/fedora/` (the SharpNode lab wizard) is intentionally
-not in this repository.
+This directory builds the **evaluation artifacts**, including the bundle
+installer. The SharpNode lab wizard (`packaging/fedora/`) is intentionally not
+in this repository.
 
 ## What ships
 
 | Artifact | Built from | Contains | How it is run |
 |---|---|---|---|
 | App OCI image | `backend/Containerfile`; `packaging/oci/` for the direct archive | `honenode`, static assets, distroless runtime | `podman load` + `podman run` (app only; needs a broker for provisioning) |
-| Fedora bundle | `packaging/os/fedora/build.sh` | native `honenode` + `honed`, static tree, examples, `manifest.json`, per-OS README | extract on Fedora; host integration is manual |
-| Rocky bundle | `packaging/os/rocky/build.sh` | native `honenode` + `honed`, static tree, examples, `manifest.json`, per-OS README | extract on Rocky 10; host integration is manual |
+| Fedora bundle | `packaging/os/fedora/build.sh` | native `honenode` + `honed`, static tree, `install.sh`/`install.py`, examples, `manifest.json`, per-OS README | extract on Fedora; `sudo ./install.sh` |
+| Rocky bundle | `packaging/os/rocky/build.sh` | native `honenode` + `honed`, static tree, `install.sh`/`install.py`, examples, `manifest.json`, per-OS README | extract on Rocky 10; `sudo ./install.sh` |
 | RPM prototype | `packaging/rpm/` | **only** `honed` and its systemd integration | experimental, RHEL 10-gated, not a release asset |
 | Smoke | `packaging/rocky/` | acceptance flow | boots Rocky 10 and drives the real broker/app path |
 
 The GitHub `release.yml` workflow builds the Fedora bundle, the Rocky bundle
-and the app image on a `v*` tag, then attaches those three assets to the
-release. The RPM prototype is not published by that workflow.
+and the app image on a `v*` tag, attaches the bundles and the offline image tar
+to the release, and publishes the app image to GHCR. The RPM prototype is not
+published by that workflow.
 
 ## Build the bundles
 
@@ -36,17 +37,16 @@ See [`os/README.md`](os/README.md) for the bundle layout and per-OS READMEs.
 - **The app is precompiled.** The OCI image and the OS bundles contain the app;
   users do not need Rust or Cargo.
 - **The broker is a host component.** It needs systemd and rootless Podman, so
-  it is not containerized. The OS bundle ships the native `honed` binary and
-  example units; installing the unit, creating the socket group, installing a
-  reviewed policy and enabling tenants remain operator actions in 0.8.8.
-- **The examples are not an installer.** `examples/app.env.example`,
-  `examples/policy.example.json` and `examples/systemd/` show the required
-  shape. A one-command installer is still deliberately absent: it would imply
-  SELinux, policy, capacity and credential decisions had been made for the
-  operator.
-- **The smoke now tests the built binaries.** CI builds the Rocky binaries in
-  the `rocky-build` job, uploads them, and the full smoke runs with
-  `--prebuilt`; it does not recompile inside the target container. Locally:
+  it is not containerized. The OS bundle's `install.py` installs the broker and
+  app units, creates the socket group and directories, installs the self-service
+  policy and prints the first-run credentials.
+- **The setup wizard is `install.sh`/`install.py`.** It verifies the bundle, uses the
+  prebuilt native binaries, defaults to a loopback panel and tenants `t01..t06`,
+  and supports `--dry-run`, `--tenants`, `--bind`, `--force` and `--uninstall`.
+  The `examples/` files remain for review and manual overrides.
+- **The smoke tests the built artifacts.** CI builds the Rocky bundle once, and
+the full smoke consumes those binaries with `--prebuilt` rather than
+  recompiling. Locally:
   `bash packaging/os/rocky/build.sh && bash packaging/rocky/run_smoke_podman.sh --prebuilt`.
 
 ## Reproducibility and current limits
@@ -59,7 +59,8 @@ See [`os/README.md`](os/README.md) for the bundle layout and per-OS READMEs.
   digest. Pinning digests and adding SBOM/provenance is release-hardening work,
   not a 0.8.8 claim.
 - SELinux policy, a signed artifact pipeline, a Fedora full smoke on GitHub,
-  and a one-command host install remain open. See
+  and a Fedora installer acceptance remain open. The bundle installer is a first
+  working path, not a Fedora/Rocky certification. See
   [`../security/README.md`](../security/README.md) and the root README.
 
 ## Offline tests

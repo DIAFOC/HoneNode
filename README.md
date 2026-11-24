@@ -45,19 +45,28 @@ bash packaging/os/rocky/build.sh    # boots Rocky 10 and builds there
 ```
 
 Each bundle records `"os"` and the ELF libc/interpreter in `manifest.json`.
-Do not install the Fedora bundle on Rocky or vice versa.
+Do not install the Fedora bundle on Rocky or vice versa. Each bundle contains
+`install.sh` (and `install.py`):
+
+```sh
+sudo ./install.sh --dry-run
+sudo ./install.sh --yes
+```
+
+It verifies the bundle, creates the `honenode` service account, installs the
+native app and broker with systemd units, installs the self-service policy for
+`t01..t06`, binds the panel to `127.0.0.1:8088`, and prints the first-run
+operator credentials once. Use `--tenants`, `--bind`, `--force`, `--uninstall`
+and `--purge` as needed.
 
 ## CI and security
 
 - `CI` (`ci.yml`): Rust format/clippy/tests, Python tests, Cargo Audit, Cargo
   Deny, Semgrep SAST, Trivy filesystem and image analysis, Betterleaks, OSV-Scanner,
-  ShellCheck, Hadolint, Actionlint, ZAP baseline DAST, and advisory OpenSCAP
-  and Lynis scans. Findings are uploaded as SARIF where the tool supports it.
-- The STRIDE model and the threat-to-tool mapping are in `security/`.
-- Host-wide OpenSCAP/Lynis and the full nested Rocky smoke are advisory on
-  GitHub: the runner is not the target host, and nested systemd/Podman is best
-  effort. The blocking Rocky job compiles the release binaries, and the smoke
-  consumes those binaries with `--prebuilt` rather than recompiling.
+  ShellCheck, Hadolint, Actionlint, ZAP baseline DAST, and the Rocky bundle
+  install + full smoke. Findings are uploaded as SARIF where the tool supports it.
+- `.github/workflows/host-audit.yml` runs the container OpenSCAP/Lynis reports on
+  demand or weekly; they are report-only and are not host compliance evidence.
 
 ## Release
 
@@ -68,9 +77,12 @@ git tag v0.8.8
 git push origin v0.8.8
 ```
 
-`release.yml` builds the Fedora and Rocky bundles and the app container image,
-then creates the GitHub release `v0.8.8` with those assets. `workflow_dispatch`
-can produce the same release manually with the `version` input.
+`release.yml` builds the Fedora and Rocky bundles (including `install.py`) and
+the app container image, scans the release image, pushes it to GHCR
+(`ghcr.io/diafoc/honenode-app:<version>` and `:latest`), and creates the GitHub
+release with the bundle tarballs and the offline image tar. `workflow_dispatch`
+can produce the same release manually with the `version` input. The image is the
+app plane only; the host broker is installed from the OS bundle.
 
 ## License
 

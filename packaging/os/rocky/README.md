@@ -12,11 +12,28 @@ Fedora. Use the Fedora bundle there.
 - `examples/` — policy, environment and systemd examples
 - `README.md`, `manifest.json`, `SHA256SUMS`
 
+## Quick install
+
+Extract the bundle and run the installer as root:
+
+```sh
+sudo ./install.sh --dry-run
+sudo ./install.sh --yes
+```
+
+The installer verifies `manifest.json`/`SHA256SUMS`, installs the native app and
+broker, creates the `honenode` system user/group and directories, installs the
+self-service policy (`t01..t06`), starts both systemd units on loopback, and
+prints the operator credentials once. Use `--tenants t91,t92` to change the
+allowlist. The app image is also published to GHCR, but the host broker remains
+a native systemd component.
+
 ## Host installation
 
 This bundle ships the broker binary (`broker/honed`), the app binary
 (`native/honenode`), and example units/policy/environment under `examples/`.
-It does **not** install a systemd unit, a policy, tenants, or SELinux labels.
+It does **not** install a systemd unit, a policy, tenants, or SELinux labels by
+itself: `install.py` performs that host step after you review the defaults.
 The experimental RPM in the source tree is a separate prototype and is not an
 asset of this bundle.
 

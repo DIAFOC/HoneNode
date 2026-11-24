@@ -41,7 +41,16 @@ jobs:
         run: cargo clippy --all-targets --all-features
       - name: Tests
         working-directory: backend
-        run: cargo test --all-targets --all-features
+        run: |
+          set -o pipefail
+          cargo test --all-targets --all-features 2>&1 | tee /tmp/rust-tests.log
+      - name: Rust test summary
+        if: always()
+        run: |
+          {
+            echo '### Rust tests'
+            grep -E '^test result:' /tmp/rust-tests.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Release build
         working-directory: backend
         run: cargo build --release --locked
@@ -61,9 +70,27 @@ jobs:
       - name: Release binaries for packaging tests
         run: cargo build --release --locked --manifest-path backend/Cargo.toml
       - name: Application tests
-        run: python -m unittest discover -s backend/crates/honenode/tests -v
+        run: |
+          set -o pipefail
+          python -m unittest discover -s backend/crates/honenode/tests -v 2>&1 | tee /tmp/app-tests.log
+      - name: Application test summary
+        if: always()
+        run: |
+          {
+            echo '### Python app tests'
+            tail -n 3 /tmp/app-tests.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Packaging tests
-        run: python -m unittest discover -s packaging/tests -v
+        run: |
+          set -o pipefail
+          python -m unittest discover -s packaging/tests -v 2>&1 | tee /tmp/packaging-tests.log
+      - name: Packaging test summary
+        if: always()
+        run: |
+          {
+            echo '### Python packaging tests'
+            tail -n 3 /tmp/packaging-tests.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
 
   security:
     name: Security analysis
@@ -177,7 +204,7 @@ jobs:
           sarif_file: betterleaks.sarif
           category: betterleaks
 
-      - name: OSV-Scanner
+      - name: OSV-Scanner (report-only)
         if: always()
         continue-on-error: true
         run: |
@@ -205,12 +232,22 @@ jobs:
         with:
           dockerfile: backend/Containerfile
           failure-threshold: error
-      - name: Actionlint (advisory)
+      - name: Actionlint
         if: always()
-        continue-on-error: true
         uses: docker://rhysd/actionlint:latest
         with:
           args: -color
+
+      - name: Security scan summary
+        if: always()
+        run: |
+          {
+            echo '### Security scan results'
+            for report in *.sarif; do
+              count=$(jq '[.runs[].results[]?] | length' "$report" 2>/dev/null || echo '?')
+              printf -- '- %s: %s result(s)\n' "$report" "$count"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dependency review
         if: always() && github.event_name == 'pull_request'
@@ -267,7 +304,6 @@ jobs:
           done
           curl -fsS http://127.0.0.1:8088/healthz
       - name: ZAP baseline
-        continue-on-error: true
         run: |
           mkdir -p zap
           chmod 0777 zap
@@ -289,67 +325,8 @@ jobs:
         if: always()
         run: docker stop honenode-app || true
 
-  openscap:
-    name: OpenSCAP container smoke (advisory)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    container:
-      image: quay.io/rockylinux/rockylinux:10
-      options: --user root
-    steps:
-      - uses: actions/checkout@v7
-      - run: dnf -y install openscap-scanner scap-security-guide
-      - name: Evaluate CIS profile
-        run: |
-          # This is a tool smoke inside a Rocky 10 container, not a host audit.
-          # The SSG stream has no container profile: bootloader, kernel, service
-          # and partitioning rules are correctly notapplicable here. Real host
-          # compliance needs a Rocky VM or a self-hosted runner.
-          profile=$(find /usr/share/xml/scap/ssg/content \
-            \( -name 'ssg-rl10-ds.xml' -o -name 'ssg-rhel10-ds.xml' -o -name 'ssg-rhel9-ds.xml' \) \
-            | head -1)
-          test -n "$profile"
-          oscap xccdf eval --profile cis \
-            --results /tmp/oscap-results.xml \
-            --report /tmp/oscap-report.html \
-            "$profile" || true
-          {
-            echo "datastream=$profile"
-            echo "profile=cis (host-oriented; container rules are notapplicable)"
-            echo "note: a bare container has no bootloader, kernel or host services,"
-            echo "so many selected rules are expected to be notapplicable."
-            echo "result counts:"
-            grep -o '<result>[^<]*' /tmp/oscap-results.xml | sed 's/.*>//' | sort | uniq -c || true
-          } | tee /tmp/oscap-summary.txt
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: openscap-report
-          path: |
-            /tmp/oscap-results.xml
-            /tmp/oscap-report.html
-            /tmp/oscap-summary.txt
-
-  lynis:
-    name: Lynis host audit (advisory)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    container:
-      image: quay.io/rockylinux/rockylinux:10
-      options: --user root
-    steps:
-      - uses: actions/checkout@v7
-      - run: dnf -y install epel-release || true
-      - run: dnf -y install lynis
-      - run: lynis audit system --quick --no-colors > /tmp/lynis.log 2>&1 || true
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: lynis-report
-          path: /tmp/lynis.log
-
   rocky-build:
-    name: Rocky 10 native build
+    name: Rocky 10 bundle build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -359,26 +336,25 @@ jobs:
       HONENODE_REPO: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v7
-      - name: Build with Rocky's toolchain
-        run: bash packaging/rocky/smoke.sh --build-only
-      - name: Upload Rocky binaries
+      - name: Build the Rocky bundle
+        run: |
+          dnf -y install gcc make python3
+          bash packaging/os/rocky/build.sh
+      - name: Upload Rocky bundle
         uses: actions/upload-artifact@v7
         with:
-          name: rocky-native-binaries
-          path: |
-            packaging/os/dist/rocky/honed
-            packaging/os/dist/rocky/honenode
+          name: rocky-bundle
+          path: packaging/os/dist/*.tar.gz
           if-no-files-found: error
 
-  # Run the smoke inside a Rocky 10 init container so systemd is PID 1. The
-  # previous host-Podman approach needed a privileged nested systemd container
-  # on the Ubuntu runner and failed during container startup, before any check.
+  # Run the bundle installer and the full smoke inside a Rocky 10 init container
+  # so systemd is PID 1. This exercises the same artifact users get, not a source
+  # rebuild, and it gates the workflow.
   smoke-rocky:
-    name: Rocky 10 full smoke (advisory)
+    name: Rocky 10 bundle install + smoke
     needs: rocky-build
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    continue-on-error: true
     container:
       image: quay.io/rockylinux/rockylinux:10-ubi-init
       options: --privileged --cgroupns=host
@@ -386,26 +362,47 @@ jobs:
       HONENODE_REPO: ${{ github.workspace }}
       HONE_SUBID_BASE: 2000
       HONE_SUBID_COUNT: 63536
-      HONED_BIN: ${{ github.workspace }}/packaging/os/dist/rocky/honed
-      HONENODE_BIN: ${{ github.workspace }}/packaging/os/dist/rocky/honenode
     steps:
       - uses: actions/checkout@v7
-      - name: Download Rocky binaries
+      - name: Download Rocky bundle
         uses: actions/download-artifact@v8
         with:
-          name: rocky-native-binaries
-          path: packaging/os/dist/rocky
-      - name: Wait for systemd
+          name: rocky-bundle
+          path: bundle-archive
+      - name: Prepare bundle
         run: |
-          chmod +x packaging/os/dist/rocky/honed packaging/os/dist/rocky/honenode
           for _ in $(seq 1 60); do
             state=$(systemctl is-system-running 2>/dev/null || true)
             case "$state" in running|degraded) break ;; esac
             sleep 1
           done
           systemctl is-system-running || true
-      - name: Run Rocky smoke against the built binaries
-        run: bash packaging/rocky/smoke.sh 2>&1 | tee /tmp/rocky-smoke.log
+          dnf -y install python3 curl
+          mkdir -p /workspace/bundle
+          tar -xzf bundle-archive/*.tar.gz -C /workspace/bundle
+          bundle_dir=$(find /workspace/bundle -maxdepth 1 -mindepth 1 -type d -name 'honenode-*' | head -1)
+          test -n "$bundle_dir"
+          echo "BUNDLE_DIR=$bundle_dir" >> "$GITHUB_ENV"
+      - name: Install the bundle
+        run: python3 "$BUNDLE_DIR/install.py" --yes --install-deps 2>&1 | tee /tmp/installer.log
+      - name: Verify installed services
+        run: |
+          systemctl --no-pager --full status honed.service honenode.service
+          curl -fsS http://127.0.0.1:8088/healthz >/dev/null
+      - name: Run Rocky smoke against the bundle binaries
+        run: |
+          set -o pipefail
+          HONED_BIN="$BUNDLE_DIR/broker/honed" \
+          HONENODE_BIN="$BUNDLE_DIR/native/honenode" \
+            bash packaging/rocky/smoke.sh 2>&1 | tee /tmp/rocky-smoke.log
+      - name: Test summary
+        if: always()
+        run: |
+          {
+            echo '### Rocky bundle install + smoke'
+            systemctl is-active honed.service honenode.service || true
+            grep '^PASS=' /tmp/rocky-smoke.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload Rocky smoke log
         if: always()
         uses: actions/upload-artifact@v7

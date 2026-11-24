@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
   security-events: write
 
 env:
@@ -106,6 +107,19 @@ jobs:
         with:
           sarif_file: trivy-release-image.sarif
           category: trivy-release-image
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push app image to GHCR
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/honenode-app"
+          docker tag "honenode-app:${VERSION}" "${image}:${VERSION}"
+          docker tag "honenode-app:${VERSION}" "${image}:latest"
+          docker push "${image}:${VERSION}"
+          docker push "${image}:latest"
       - name: Save image
         run: docker save "honenode-app:${VERSION}" -o "honenode-app-${VERSION}.tar"
       - uses: actions/upload-artifact@v7
@@ -119,19 +133,41 @@ jobs:
     needs: [version, fedora-bundle, rocky-bundle, app-image]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v8
+      - name: Download Fedora bundle
+        uses: actions/download-artifact@v8
         with:
+          name: fedora-bundle
           path: dist
-          merge-multiple: true
+      - name: Download Rocky bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: rocky-bundle
+          path: dist
+      - name: Download app image
+        uses: actions/download-artifact@v8
+        with:
+          name: app-image
+          path: dist
       - uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.version.outputs.value }}
           name: HoneNode ${{ needs.version.outputs.value }}
           generate_release_notes: true
           fail_on_unmatched_files: true
+          overwrite_files: true
           files: dist/*
           body: |
             HoneNode ${{ needs.version.outputs.value }} — single-host multi-tenant hosting plane.
+
+            Container image (app plane only):
+            ```
+            podman pull ghcr.io/diafoc/honenode-app:${{ needs.version.outputs.value }}
+            podman pull ghcr.io/diafoc/honenode-app:latest
+            ```
+            The image contains the management-plane app and static assets. It is not the
+            whole product: the host broker (`honed`) needs systemd/rootless Podman and is
+            installed from the OS bundle. The bundle's `install.py` sets up the native app
+            and broker, policy, service user and first-run credentials.
 
             Assets:
             - `honenode-${{ needs.version.outputs.value }}-fedora-x86_64.tar.gz` — Fedora-tagged bundle

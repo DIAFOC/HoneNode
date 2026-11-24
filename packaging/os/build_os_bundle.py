@@ -157,7 +157,7 @@ def write_archive(
                         data = value if isinstance(value, bytes) else value.read_bytes()
                         mode = (
                             0o555
-                            if relative in {"native/honenode", "broker/honed"}
+                            if relative in {"native/honenode", "broker/honed", "install.sh"}
                             else 0o644
                         )
                         archive.addfile(
@@ -197,11 +197,16 @@ def build_bundle(
         static = work / "static"
         static_files = copy_static_tree(static_dir, static)
         payload: dict[str, bytes | Path] = {
+            "install.py": OS_DIR / "install.py",
+            "install.sh": OS_DIR / "install.sh",
             "native/honenode": app_binary,
             "broker/honed": broker_binary,
             "examples/app.env.example": (OS_DIR / os_name / "app.env.example").read_bytes(),
             "examples/policy.example.json": (
                 REPO / "backend/crates/honed/policy.example.json"
+            ).read_bytes(),
+            "examples/policy.selfservice.json": (
+                REPO / "backend/crates/honed/policy.selfservice.example.json"
             ).read_bytes(),
             "examples/systemd/honed.service": (
                 REPO / "packaging/rpm/honed.service"

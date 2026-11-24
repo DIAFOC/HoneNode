@@ -30,8 +30,24 @@ the target-specific quickstart.
 ## Contents
 
 Each bundle contains the app (`native/honenode`), the broker
-(`broker/honed`), the app's static assets, policy/environment/systemd examples,
-`README.md`, `manifest.json` and `SHA256SUMS`.
+(`broker/honed`), the app's static assets, `install.sh`/`install.py`, policy/environment/systemd
+examples, `README.md`, `manifest.json` and `SHA256SUMS`.
+
+## Setup
+
+From the extracted bundle, as root:
+
+```sh
+sudo ./install.sh --dry-run
+sudo ./install.sh --yes
+```
+
+`install.py` verifies the bundle integrity, creates the `honenode` service
+user/group, installs the native app and broker with systemd units, installs the
+self-service policy for `t01..t06`, binds the panel to `127.0.0.1:8088`, and
+prints the first-run operator credentials once. `--tenants`, `--bind`,
+`--tenant-domain`, `--force`, `--uninstall` and `--purge` are available. This
+is a host-native path; the GHCR app image is the separate container image.
 
 The Fedora bundle's README describes its contents and build. The Rocky
 bundle's README documents the precompiled binaries, the manual host-integration

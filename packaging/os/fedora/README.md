@@ -23,12 +23,26 @@ runs the Rust and Python suites unless `--skip-tests` is passed. In CI the same
 script runs inside `fedora:latest` and the resulting archive is attached to the
 GitHub release.
 
+## Quick install
+
+Extract the bundle and run the installer as root:
+
+```sh
+sudo ./install.sh --dry-run
+sudo ./install.sh --yes
+```
+
+The installer verifies `manifest.json`/`SHA256SUMS`, installs the native app and
+broker, creates the `honenode` system user/group and directories, installs the
+self-service policy (`t01..t06`), starts both systemd units on loopback, and
+prints the operator credentials once. The app image is also published to GHCR;
+the host broker remains a native systemd component.
+
 ## Runtime
 
-The bundle contains the app and broker binaries; it does not install a host
-service, create tenants, or start anything. Host integration is manual in
-0.8.8: review the examples, install the broker unit and policy, and start the
-app from the extracted tree. Use the OS-specific bundle with the matching host.
+The bundle contains the app and broker binaries; `install.py` is the host
+integration step. The Fedora lab wizard is separate and lives in the SharpNode
+host repository; it is not required for a clean bundle install.
 
 The app starts with `HONE_BIND`, `HONE_BROKER_SOCKET`, `HONE_REGISTRY`,
 `HONE_STATIC_DIR` and the policy/tenant environment. On first boot it generates

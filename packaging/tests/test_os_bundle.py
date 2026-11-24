@@ -47,6 +47,9 @@ class OsBundleTests(unittest.TestCase):
         self.assertEqual(manifest["binaries"]["app"]["libc"], "glibc")
         self.assertIn("honenode-0.8.0-fedora-x86_64/native/honenode", names)
         self.assertIn("honenode-0.8.0-fedora-x86_64/broker/honed", names)
+        self.assertIn("honenode-0.8.0-fedora-x86_64/install.py", names)
+        self.assertIn("honenode-0.8.0-fedora-x86_64/install.sh", names)
+        self.assertIn("honenode-0.8.0-fedora-x86_64/examples/policy.selfservice.json", names)
         self.assertIn("honenode-0.8.0-fedora-x86_64/SHA256SUMS", names)
 
     def test_rocky_bundle_uses_the_same_layout_but_a_different_tag(self):

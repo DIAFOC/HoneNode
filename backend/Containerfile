@@ -27,6 +27,11 @@ RUN cargo build --release -p honenode --locked
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
+LABEL org.opencontainers.image.source="https://github.com/DIAFOC/HoneNode" \
+      org.opencontainers.image.title="HoneNode app" \
+      org.opencontainers.image.description="HoneNode management plane; provisioning needs the host broker" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later"
+
 COPY --from=build /src/target/release/honenode /usr/local/bin/honenode
 COPY --from=build /src/static /app/static
 
