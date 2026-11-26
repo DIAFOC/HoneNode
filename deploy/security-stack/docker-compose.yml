@@ -8,7 +8,7 @@
 
 services:
   waf:
-    image: owasp/modsecurity-crs:nginx@sha256:133267aa811e1a57a23b52ef04b3c30e802bcbe5454588f6d6af1f69f4b2b667
+    image: docker.io/owasp/modsecurity-crs:nginx@sha256:133267aa811e1a57a23b52ef04b3c30e802bcbe5454588f6d6af1f69f4b2b667
     container_name: sharpnode-waf
     restart: unless-stopped
     network_mode: host
@@ -55,7 +55,7 @@ services:
         max-file: "3"
 
   splunk:
-    image: splunk/splunk:latest
+    image: docker.io/splunk/splunk:latest
     container_name: sharpnode-splunk
     restart: unless-stopped
     environment:
