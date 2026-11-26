@@ -26,9 +26,10 @@ deploy/security-stack/
 ## 1. Prepare the host
 
 ```sh
-sudo mkdir -p /srv/waf/logs /srv/waf/rules
+sudo mkdir -p /srv/waf/logs /srv/waf/rules /srv/splunk/apps
 sudo cp waf/sharpnode-rules.conf waf/modsecurity-override.conf.template /srv/waf/rules/
-sudo chown -R "$USER":"$(id -gn)" /srv/waf/logs /srv/waf/rules
+sudo cp -a splunk/apps/sharpnode /srv/splunk/apps/
+sudo chown -R "$USER":"$(id -gn)" /srv/waf/logs /srv/waf/rules /srv/splunk/apps
 sudo chmod 0750 /srv/waf/logs
 sudo chmod 0644 /srv/waf/rules/*
 ```
@@ -41,7 +42,8 @@ login user. The `z` flag relabels them for SELinux.
 
 The config files must also live outside your home directory: `/home/<user>` is
 `0700` and `user_home_t`, so the container cannot read them and the entrypoint
-exits with status 2.
+exits with status 2. The same applies to the Splunk app, which is why it is
+copied to `/srv/splunk/apps`.
 
 If the WAF image's nginx UID is not `101`, check it and adjust `userns_mode`:
 
@@ -103,11 +105,12 @@ legitimate app form, switch to `DetectionOnly` in `docker-compose.yml`, inspect
 Splunk is bound to loopback. From the Fedora lab:
 
 ```sh
-ssh -L 8000:127.0.0.1:8000 node1@192.168.0.106
+ssh -L 18000:127.0.0.1:8000 node1@192.168.0.106
 ```
 
-Open `http://127.0.0.1:8000` and sign in with the `SPLUNK_PASSWORD` from
-`.env`. The **SharpNode Security** app contains the dashboard.
+Open `http://127.0.0.1:18000` and sign in with the `SPLUNK_PASSWORD` from
+`.env`. The **SharpNode Security** app contains the dashboard. Use `18000`
+locally if port `8000` is already taken on the Fedora machine.
 
 The HEC is on `127.0.0.1:18088` (mapped from the container's 8088, because the
 app already uses 8088 on the host).

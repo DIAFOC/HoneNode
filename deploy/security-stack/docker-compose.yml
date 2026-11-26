@@ -76,7 +76,9 @@ services:
     volumes:
       - splunk_data:/opt/splunk/var
       - splunk_etc:/opt/splunk/etc
-      - ./splunk/apps/sharpnode:/opt/splunk/etc/apps/sharpnode:ro
+      # Copy the app to /srv/splunk/apps (see README step 1). Mounting it from
+      # the repo checkout fails under SELinux: the home directory is user_home_t.
+      - /srv/splunk/apps/sharpnode:/opt/splunk/etc/apps/sharpnode:ro,z
     ulimits:
       nproc: 65535
       nofile:
