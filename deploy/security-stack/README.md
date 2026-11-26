@@ -27,22 +27,23 @@ deploy/security-stack/
 
 ```sh
 sudo mkdir -p /srv/waf/logs /srv/waf/rules
-# If the Fluent Bit package created the fluent-bit group:
-sudo chown 101:fluent-bit /srv/waf/logs
-# Otherwise (container shipper running as root):
-# sudo chown 101:root /srv/waf/logs
-sudo chmod 0750 /srv/waf/logs
 sudo cp waf/sharpnode-rules.conf waf/modsecurity-override.conf.template /srv/waf/rules/
+sudo chown -R "$USER":"$(id -gn)" /srv/waf/logs /srv/waf/rules
+sudo chmod 0750 /srv/waf/logs
 sudo chmod 0644 /srv/waf/rules/*
 ```
 
-The WAF image runs as the unprivileged `nginx` user (uid 101), so the config
-files must live outside your home directory. `/home/<user>` is `0700` and
-`user_home_t`; the container cannot traverse or read it, and the entrypoint
-exits with status 2. The compose file mounts the files from `/srv/waf/rules`
-and uses the `z` SELinux flag to relabel them for the container.
+The stack runs rootless. The WAF image runs as the unprivileged `nginx` user
+(uid 101), which rootless Podman would normally map to a subordinate host uid.
+The compose file sets `userns_mode: keep-id:uid=101,gid=101`, so container uid
+101 maps to your login user; the host paths must therefore be owned by your
+login user. The `z` flag relabels them for SELinux.
 
-If the WAF image's nginx UID is not `101`, check it and adjust the owner:
+The config files must also live outside your home directory: `/home/<user>` is
+`0700` and `user_home_t`, so the container cannot read them and the entrypoint
+exits with status 2.
+
+If the WAF image's nginx UID is not `101`, check it and adjust `userns_mode`:
 
 ```sh
 podman run --rm owasp/modsecurity-crs:nginx id -u nginx
@@ -125,6 +126,7 @@ gpgkey=https://packages.fluentbit.io/fluentbit.key
 enabled=1
 EOF
 sudo dnf install -y fluent-bit
+sudo chgrp fluent-bit /srv/waf/logs
 sudo cp fluent-bit/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 sudo sed -i 's/REPLACE_WITH_SPLUNK_HEC_TOKEN/<your-hec-token>/' /etc/fluent-bit/fluent-bit.conf
 sudo chmod 0600 /etc/fluent-bit/fluent-bit.conf
@@ -190,6 +192,9 @@ sudo journalctl -u fluent-bit -n 50 --no-pager   # package install
 podman logs sharpnode-fluent-bit                 # container install
 ```
 
+- **`open /srv/waf/logs: permission denied` when starting the WAF:** the host
+  paths are not owned by the login user. Re-run the `chown` from step 1; the
+  `keep-id` mapping requires `/srv/waf` to be owned by your login user.
 - **WAF container exits with status 2:** the entrypoint could not read a
   bind-mounted file. Check `podman logs sharpnode-waf` for
   `cannot open ... Permission denied`; make sure the files are in

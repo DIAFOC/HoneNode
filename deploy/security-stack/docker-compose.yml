@@ -12,6 +12,11 @@ services:
     container_name: sharpnode-waf
     restart: unless-stopped
     network_mode: host
+    # Rootless Podman maps container uid 101 (nginx) to a subordinate host uid
+    # by default, which cannot write a host directory owned by the login user.
+    # keep-id maps the login user to container uid 101 instead, so /srv/waf can
+    # stay owned by the login user with mode 0750.
+    userns_mode: "keep-id:uid=101,gid=101"
     environment:
       BACKEND: http://127.0.0.1:8088
       PORT: "8080"
@@ -37,13 +42,11 @@ services:
       ANOMALY_INBOUND: "5"
       ANOMALY_OUTBOUND: "4"
       NGINX_WORKER_PROCESSES: "1"
-    # The image runs as the unprivileged nginx user (uid 101), so every bind
-    # mount must be readable/writable by that uid and carry a container SELinux
-    # label. The `z` flag relabels the host paths as container_file_t (shared
-    # with the Fluent Bit container that reads the same log directory).
-    #
-    # Never mount these files from a home directory: /home/<user> is 0700 and
-    # user_home_t, so the container cannot read them and the entrypoint exits 2.
+    # The image runs as the unprivileged nginx user (uid 101). The `z` flag
+    # relabels the host paths as container_file_t (shared with the Fluent Bit
+    # container that reads the same log directory). Never mount these files
+    # from a home directory: /home/<user> is 0700 and user_home_t, so the
+    # container cannot read them and the entrypoint exits 2.
     volumes:
       - /srv/waf/logs:/var/log/modsecurity/audit:z
       - /srv/waf/rules/sharpnode-rules.conf:/etc/modsecurity.d/sharpnode-rules.conf:ro,z
