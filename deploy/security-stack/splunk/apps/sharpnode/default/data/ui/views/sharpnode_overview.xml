@@ -1,0 +1,116 @@
+<dashboard version="1.1" theme="dark" stylesheet="sharpnode.css">
+  <label>SharpNode Security</label>
+  <description>WAF, broker and app telemetry for the SharpNode hosting plane.</description>
+
+  <row>
+    <panel>
+      <single>
+        <title>WAF events (24h)</title>
+        <search>
+          <query>index=waf sourcetype=waf_audit | stats count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x2a2a30","0xd4af37"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Blocked (24h)</title>
+        <search>
+          <query>index=waf sourcetype=waf_audit | spath input=_raw path=transaction.is_interrupted output=blocked | where blocked=="true" | stats count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x2a2a30","0xd4af37"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Broker requests (24h)</title>
+        <search>
+          <query>index=honenode sourcetype=honenode "broker request" | stats count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="rangeColors">["0x2a2a30","0xd4af37"]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <chart>
+        <title>WAF actions over time</title>
+        <search>
+          <query>index=waf sourcetype=waf_audit | spath input=_raw path=transaction.is_interrupted output=blocked | eval action=if(blocked=="true","blocked","allowed") | timechart span=5m count by action</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Requests</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">[0xd4af37,0x6b6b72]</option>
+        <option name="height">280</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top source IPs</title>
+        <search>
+          <query>index=waf sourcetype=waf_audit | spath input=_raw path=transaction.client_ip output=src_ip | top limit=10 src_ip</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.seriesColors">[0xd4af37,0xf5c542,0xb8860b,0x8a6d1f,0x6b6b72,0x4a4a50,0x2a2a30]</option>
+        <option name="height">280</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>Recent WAF blocks</title>
+        <search>
+          <query>index=waf sourcetype=waf_audit | spath input=_raw path=transaction.client_ip output=src_ip | spath input=_raw path=transaction.request.uri output=uri | spath input=_raw path=transaction.response.http_code output=status | spath input=_raw path=transaction.is_interrupted output=blocked | spath input=_raw path=transaction.messages{}.details.ruleId output=rule_id | spath input=_raw path=transaction.messages{}.message output=message | where blocked=="true" | table _time, src_ip, uri, status, rule_id, message | sort -_time</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">15</option>
+        <option name="displayRowNumbers">false</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>Broker activity</title>
+        <search>
+          <query>index=honenode sourcetype=honenode "broker request" | spath input=_raw path=fields.action output=action | spath input=_raw path=fields.tenant_id output=tenant | spath input=_raw path=fields.outcome output=outcome | spath input=_raw path=fields.reason output=reason | table _time, action, tenant, outcome, reason | sort -_time</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">15</option>
+        <option name="displayRowNumbers">false</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>

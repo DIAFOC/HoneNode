@@ -1,0 +1,66 @@
+/* SharpNode gold/black dashboard skin. */
+.dashboard-body {
+  background: #0b0b0d !important;
+  color: #f5f5f5 !important;
+}
+
+.dashboard-header {
+  background: #111114 !important;
+  border-bottom: 2px solid #d4af37 !important;
+}
+
+.dashboard-header h1,
+.dashboard-header .dashboard-title {
+  color: #d4af37 !important;
+  letter-spacing: 0.04em;
+}
+
+.panel {
+  background: #17171b !important;
+  border: 1px solid #2a2a30 !important;
+  border-radius: 6px !important;
+}
+
+.panel-head h3,
+.panel-head .panel-title {
+  color: #d4af37 !important;
+}
+
+.panel-body {
+  background: #17171b !important;
+}
+
+.table {
+  color: #f5f5f5 !important;
+}
+
+.table th {
+  background: #111114 !important;
+  color: #d4af37 !important;
+  border-color: #2a2a30 !important;
+}
+
+.table td {
+  border-color: #2a2a30 !important;
+}
+
+.single-value .single-result,
+.single-value .under-label {
+  color: #d4af37 !important;
+}
+
+.single-value .single-result {
+  font-weight: 700 !important;
+}
+
+.chart-title,
+.table-title {
+  color: #d4af37 !important;
+}
+
+.search-button,
+button.btn-primary {
+  background: #d4af37 !important;
+  border-color: #d4af37 !important;
+  color: #0b0b0d !important;
+}

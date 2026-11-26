@@ -1,0 +1,92 @@
+# SharpNode WAF + Splunk stack for the HoneNode host.
+#
+# The WAF is inline in front of the app on 127.0.0.1:8088 and listens on
+# 127.0.0.1:8080. Splunk receives WAF, broker and app logs through the HEC on
+# 127.0.0.1:18088. The host runs Fluent Bit (see fluent-bit/fluent-bit.conf).
+#
+# Copy .env.example to .env and set strong values before starting.
+
+services:
+  waf:
+    image: owasp/modsecurity-crs:nginx@sha256:133267aa811e1a57a23b52ef04b3c30e802bcbe5454588f6d6af1f69f4b2b667
+    container_name: sharpnode-waf
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      BACKEND: http://127.0.0.1:8088
+      PORT: "8080"
+      SERVER_NAME: "_"
+      PROXY_HOST_HEADER: "$$http_host"
+      NGINX_X_FORWARDED_PORT: "8080"
+      NGINX_ALWAYS_TLS_REDIRECT: "off"
+      # Start with DetectionOnly while tuning the CRS, then switch to On.
+      MODSEC_RULE_ENGINE: "On"
+      MODSEC_REQ_BODY_ACCESS: "On"
+      MODSEC_RESP_BODY_ACCESS: "Off"
+      MODSEC_AUDIT_ENGINE: "On"
+      MODSEC_AUDIT_LOG_FORMAT: JSON
+      MODSEC_AUDIT_LOG_TYPE: Serial
+      # A=header, F=response headers, H=request headers, K=matched rules,
+      # Z=boundary. B (request body) is deliberately excluded so credentials
+      # are not written to the audit log.
+      MODSEC_AUDIT_LOG_PARTS: AFHKZ
+      MODSEC_AUDIT_LOG: /var/log/modsecurity/audit/audit.log
+      ACCESSLOG: /var/log/modsecurity/audit/access.log
+      ERRORLOG: /var/log/modsecurity/audit/error.log
+      BLOCKING_PARANOIA: "1"
+      DETECTION_PARANOIA: "1"
+      ANOMALY_INBOUND: "5"
+      ANOMALY_OUTBOUND: "4"
+      NGINX_WORKER_PROCESSES: "1"
+    volumes:
+      - /srv/waf/logs:/var/log/modsecurity/audit
+      - /srv/waf/rules/sharpnode-rules.conf:/etc/modsecurity.d/sharpnode-rules.conf:ro
+    configs:
+      - source: modsec_include
+        target: /etc/nginx/templates/modsecurity.d/modsecurity-override.conf.template
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/healthz"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  splunk:
+    image: splunk/splunk:latest
+    container_name: sharpnode-splunk
+    restart: unless-stopped
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_GENERAL_TERMS: --accept-sgt-current-at-splunk-com
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:?set SPLUNK_PASSWORD in .env}
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:?set SPLUNK_HEC_TOKEN in .env}
+      TZ: America/Mexico_City
+    ports:
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8089:8089"
+      # HEC inside the container is 8088; the app already uses 8088 on the
+      # host, so publish it on 18088.
+      - "127.0.0.1:18088:8088"
+    volumes:
+      - splunk_data:/opt/splunk/var
+      - splunk_etc:/opt/splunk/etc
+      - ./splunk/apps/sharpnode:/opt/splunk/etc/apps/sharpnode:ro
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+
+configs:
+  modsec_include:
+    content: |
+      Include /etc/modsecurity.d/sharpnode-rules.conf
+
+volumes:
+  splunk_data:
+  splunk_etc:
