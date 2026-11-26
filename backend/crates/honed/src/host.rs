@@ -344,6 +344,12 @@ pub fn tenant_create(config: &Config, slug: &str) -> Result<String, String> {
         run("useradd", &args)?;
     }
 
+    // The tenant's user-manager journal is only readable by the
+    // systemd-journal group; add the tenant so the panel's log view works.
+    if run("getent", &["group", "systemd-journal"]).is_ok() {
+        run("usermod", &["-aG", "systemd-journal", slug])?;
+    }
+
     ensure_subid(slug, "/etc/subuid", "--add-subuids", config)?;
     ensure_subid(slug, "/etc/subgid", "--add-subgids", config)?;
     let uid = user_uid(slug)?;
