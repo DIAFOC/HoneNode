@@ -11,6 +11,7 @@ deploy/security-stack/
 ├── docker-compose.yml          # WAF + Splunk
 ├── .env.example                # copy to .env and set strong values
 ├── waf/sharpnode-rules.conf    # SharpNode-specific ModSecurity rules
+├── waf/modsecurity-override.conf.template
 ├── splunk/apps/sharpnode/      # Splunk app: dashboard, indexes, props
 └── fluent-bit/fluent-bit.conf  # host shipper: journal + WAF logs -> HEC
 ```
@@ -18,15 +19,18 @@ deploy/security-stack/
 ## Host prerequisites
 
 - HoneNode app listening on `127.0.0.1:8088`.
-- Podman (or Docker) and `podman-compose`.
-- Fluent Bit on the host.
-- The `fluent-bit` group exists (created by the Fluent Bit package).
+- Podman (or Docker).
+- `podman-compose` installed with pip; Rocky 10 does not package it.
+- Fluent Bit from the Fluent Bit repository or the `fluent/fluent-bit` container.
 
 ## 1. Prepare the host
 
 ```sh
 sudo mkdir -p /srv/waf/logs /srv/waf/rules
+# If the Fluent Bit package created the fluent-bit group:
 sudo chown 101:fluent-bit /srv/waf/logs
+# Otherwise (container shipper running as root):
+# sudo chown 101:root /srv/waf/logs
 sudo chmod 0750 /srv/waf/logs
 sudo cp waf/sharpnode-rules.conf /srv/waf/rules/
 ```
@@ -49,15 +53,28 @@ Do not commit `.env`.
 
 ## 3. Start the stack
 
+Rocky 10 does not package `podman-compose`; install it with pip:
+
 ```sh
-podman-compose up -d
-podman-compose ps
+sudo dnf install -y python3-pip
+python3 -m pip install --user podman-compose
+~/.local/bin/podman-compose --version
 ```
 
-If `podman-compose` is missing:
+Then, from `deploy/security-stack`:
 
 ```sh
-sudo dnf install podman-compose
+~/.local/bin/podman-compose up -d
+~/.local/bin/podman-compose ps
+```
+
+If `pip` refuses because the environment is externally managed, use `pipx`:
+
+```sh
+sudo dnf install -y pipx
+pipx install podman-compose
+pipx ensurepath
+podman-compose up -d
 ```
 
 ## 4. Test the WAF
@@ -89,14 +106,40 @@ app already uses 8088 on the host).
 
 ## 6. Install Fluent Bit
 
+Option A — Fluent Bit repository:
+
 ```sh
-sudo dnf install fluent-bit
+sudo tee /etc/yum.repos.d/fluent-bit.repo <<'EOF'
+[fluent-bit]
+name=Fluent Bit
+baseurl=https://packages.fluentbit.io/rockylinux/10/$basearch/
+gpgcheck=1
+gpgkey=https://packages.fluentbit.io/fluentbit.key
+enabled=1
+EOF
+sudo dnf install -y fluent-bit
 sudo cp fluent-bit/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 sudo sed -i 's/REPLACE_WITH_SPLUNK_HEC_TOKEN/<your-hec-token>/' /etc/fluent-bit/fluent-bit.conf
 sudo chmod 0600 /etc/fluent-bit/fluent-bit.conf
 sudo usermod -aG systemd-journal fluent-bit
 sudo systemctl enable --now fluent-bit
 sudo journalctl -u fluent-bit -n 50 --no-pager
+```
+
+Option B — container (no package):
+
+```sh
+sudo mkdir -p /etc/fluent-bit /var/lib/fluent-bit
+sudo cp fluent-bit/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
+sudo sed -i 's/REPLACE_WITH_SPLUNK_HEC_TOKEN/<your-hec-token>/' /etc/fluent-bit/fluent-bit.conf
+sudo chmod 0600 /etc/fluent-bit/fluent-bit.conf
+podman run -d --name sharpnode-fluent-bit --network host --user root \
+  -v /etc/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro \
+  -v /srv/waf/logs:/srv/waf/logs:ro \
+  -v /var/log/journal:/var/log/journal:ro \
+  -v /run/systemd/journal:/run/systemd/journal:ro \
+  -v /var/lib/fluent-bit:/var/lib/fluent-bit \
+  fluent/fluent-bit:latest
 ```
 
 The shipper reads:
@@ -136,7 +179,8 @@ already preserve the original Host.
 podman logs sharpnode-waf
 podman logs sharpnode-splunk
 sudo tail -n 50 /srv/waf/logs/audit.log
-sudo journalctl -u fluent-bit -n 50 --no-pager
+sudo journalctl -u fluent-bit -n 50 --no-pager   # package install
+podman logs sharpnode-fluent-bit                 # container install
 ```
 
 - **WAF 403 on legitimate requests:** switch to `DetectionOnly`, inspect the

@@ -41,9 +41,7 @@ services:
     volumes:
       - /srv/waf/logs:/var/log/modsecurity/audit
       - /srv/waf/rules/sharpnode-rules.conf:/etc/modsecurity.d/sharpnode-rules.conf:ro
-    configs:
-      - source: modsec_include
-        target: /etc/nginx/templates/modsecurity.d/modsecurity-override.conf.template
+      - ./waf/modsecurity-override.conf.template:/etc/nginx/templates/modsecurity.d/modsecurity-override.conf.template:ro
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/healthz"]
       start_period: 30s
@@ -81,11 +79,6 @@ services:
       nofile:
         soft: 65535
         hard: 65535
-
-configs:
-  modsec_include:
-    content: |
-      Include /etc/modsecurity.d/sharpnode-rules.conf
 
 volumes:
   splunk_data:
