@@ -78,7 +78,9 @@ services:
       - splunk_etc:/opt/splunk/etc
       # Copy the app to /srv/splunk/apps (see README step 1). Mounting it from
       # the repo checkout fails under SELinux: the home directory is user_home_t.
-      - /srv/splunk/apps/sharpnode:/opt/splunk/etc/apps/sharpnode:ro,z
+      # Keep this mount read-write: Splunk's first-boot Ansible task recursively
+      # chowns /opt/splunk, and a read-only mount makes that task fail and retry.
+      - /srv/splunk/apps/sharpnode:/opt/splunk/etc/apps/sharpnode:z
     ulimits:
       nproc: 65535
       nofile:
