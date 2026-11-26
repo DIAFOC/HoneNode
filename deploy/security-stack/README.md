@@ -32,8 +32,15 @@ sudo chown 101:fluent-bit /srv/waf/logs
 # Otherwise (container shipper running as root):
 # sudo chown 101:root /srv/waf/logs
 sudo chmod 0750 /srv/waf/logs
-sudo cp waf/sharpnode-rules.conf /srv/waf/rules/
+sudo cp waf/sharpnode-rules.conf waf/modsecurity-override.conf.template /srv/waf/rules/
+sudo chmod 0644 /srv/waf/rules/*
 ```
+
+The WAF image runs as the unprivileged `nginx` user (uid 101), so the config
+files must live outside your home directory. `/home/<user>` is `0700` and
+`user_home_t`; the container cannot traverse or read it, and the entrypoint
+exits with status 2. The compose file mounts the files from `/srv/waf/rules`
+and uses the `z` SELinux flag to relabel them for the container.
 
 If the WAF image's nginx UID is not `101`, check it and adjust the owner:
 
@@ -135,7 +142,7 @@ sudo sed -i 's/REPLACE_WITH_SPLUNK_HEC_TOKEN/<your-hec-token>/' /etc/fluent-bit/
 sudo chmod 0600 /etc/fluent-bit/fluent-bit.conf
 podman run -d --name sharpnode-fluent-bit --network host --user root \
   -v /etc/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro \
-  -v /srv/waf/logs:/srv/waf/logs:ro \
+  -v /srv/waf/logs:/srv/waf/logs:ro,z \
   -v /var/log/journal:/var/log/journal:ro \
   -v /run/systemd/journal:/run/systemd/journal:ro \
   -v /var/lib/fluent-bit:/var/lib/fluent-bit \
@@ -170,8 +177,8 @@ SharpNode palette.
 
 When Caddy is installed, change the WAF `BACKEND` to the Caddy loopback
 listener (or place the WAF behind Caddy), and enable the Caddy input in
-`fluent-bit/fluent-bit.conf`. The WAF's `SERVER_NAME` and `PROXY_HOST_HEADER`
-already preserve the original Host.
+`fluent-bit/fluent-bit.conf`. The WAF's default `PROXY_HOST_HEADER` (`$host`)
+already preserves the original Host.
 
 ## Troubleshooting
 
@@ -183,6 +190,11 @@ sudo journalctl -u fluent-bit -n 50 --no-pager   # package install
 podman logs sharpnode-fluent-bit                 # container install
 ```
 
+- **WAF container exits with status 2:** the entrypoint could not read a
+  bind-mounted file. Check `podman logs sharpnode-waf` for
+  `cannot open ... Permission denied`; make sure the files are in
+  `/srv/waf/rules` (not in your home directory) and that the compose mounts
+  carry the `z` flag.
 - **WAF 403 on legitimate requests:** switch to `DetectionOnly`, inspect the
   audit log, add an exclusion, switch back to `On`.
 - **No WAF events in Splunk:** check the Fluent Bit token, the HEC port

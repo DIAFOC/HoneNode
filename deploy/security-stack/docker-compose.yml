@@ -16,7 +16,6 @@ services:
       BACKEND: http://127.0.0.1:8088
       PORT: "8080"
       SERVER_NAME: "_"
-      PROXY_HOST_HEADER: "$$http_host"
       NGINX_X_FORWARDED_PORT: "8080"
       NGINX_ALWAYS_TLS_REDIRECT: "off"
       # Start with DetectionOnly while tuning the CRS, then switch to On.
@@ -38,16 +37,17 @@ services:
       ANOMALY_INBOUND: "5"
       ANOMALY_OUTBOUND: "4"
       NGINX_WORKER_PROCESSES: "1"
+    # The image runs as the unprivileged nginx user (uid 101), so every bind
+    # mount must be readable/writable by that uid and carry a container SELinux
+    # label. The `z` flag relabels the host paths as container_file_t (shared
+    # with the Fluent Bit container that reads the same log directory).
+    #
+    # Never mount these files from a home directory: /home/<user> is 0700 and
+    # user_home_t, so the container cannot read them and the entrypoint exits 2.
     volumes:
-      - /srv/waf/logs:/var/log/modsecurity/audit
-      - /srv/waf/rules/sharpnode-rules.conf:/etc/modsecurity.d/sharpnode-rules.conf:ro
-      - ./waf/modsecurity-override.conf.template:/etc/nginx/templates/modsecurity.d/modsecurity-override.conf.template:ro
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/healthz"]
-      start_period: 30s
-      interval: 10s
-      timeout: 5s
-      retries: 12
+      - /srv/waf/logs:/var/log/modsecurity/audit:z
+      - /srv/waf/rules/sharpnode-rules.conf:/etc/modsecurity.d/sharpnode-rules.conf:ro,z
+      - /srv/waf/rules/modsecurity-override.conf.template:/etc/nginx/templates/modsecurity.d/modsecurity-override.conf.template:ro,z
     logging:
       driver: json-file
       options:
