@@ -230,13 +230,16 @@ def ensure_directories() -> None:
         (ETC_HOSTING, 0o750, SERVICE_GROUP),
         (ETC_HOSTING / "caddy", 0o750, SERVICE_GROUP),
         (Path("/etc/containers/systemd/users"), 0o755, None),
-        (HOSTING, 0o750, SERVICE_GROUP),
+        (HOSTING, 0o755, None),
     ):
         path.mkdir(parents=True, exist_ok=True)
         os.chmod(path, mode)
         if group:
             gid = grp.getgrnam(group).gr_gid
             os.chown(path, 0, gid)
+        else:
+            # The broker requires the tenant data root to be root:root 0755.
+            os.chown(path, 0, 0)
     os.chown(REGISTRY, pwd.getpwnam(SERVICE_USER).pw_uid, grp.getgrnam(SERVICE_GROUP).gr_gid)
 
 
